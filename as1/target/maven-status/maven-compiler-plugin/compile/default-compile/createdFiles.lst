@@ -3,6 +3,7 @@ socs/network/message/SOSPFPacket.class
 socs/network/node/LinkStateDatabase.class
 socs/network/message/LinkDescription.class
 socs/network/node/RouterDescription.class
+socs/network/node/Router$1.class
 socs/network/node/Router.class
 socs/network/util/Configuration.class
 socs/network/message/LSA.class

@@ -1,10 +1,13 @@
 package socs.network.node;
 
 import socs.network.util.Configuration;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-
+import java.util.concurrent.*;
+import java.util.*;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class Router {
 
@@ -17,7 +20,29 @@ public class Router {
 
   public Router(Configuration config) {
     rd.simulatedIPAddress = config.getString("socs.network.router.ip");
+    rd.processPortNumber = config.getShort("socs.network.router.port");
+    rd.processIPAddress = "127.0.0.1";
     lsd = new LinkStateDatabase(rd);
+
+    // Start listener thread
+    Runnable listener = new Runnable() {
+          @Override
+          public void run() {
+
+              try {
+                  ServerSocket routerSocket = new ServerSocket(rd.processPortNumber);
+
+                  while (true) {
+                      Socket listenerSocket = routerSocket.accept();
+                      //ObjectOutputStream objectout = new ObjectOutputStream(listenerSocket.getOutputStream());
+                  }
+              } catch (IOException e) {
+                  System.err.println("Accept failed.");
+              }
+
+          }
+      };
+    new Thread(listener).start();
   }
 
   /**
@@ -48,15 +73,60 @@ public class Router {
    * <p/>
    * NOTE: this command should not trigger link database synchronization
    */
-  private void processAttach(String processIP, short processPort,
-                             String simulatedIP, short weight) {
+  private void processAttach(String processIP, short processPort, String simulatedIP, short weight) {
+
+    // Create other router description
+    RouterDescription otherRouter = new RouterDescription();
+    otherRouter.processIPAddress = "127.0.0.1";
+    otherRouter.simulatedIPAddress = simulatedIP;
+    otherRouter.processPortNumber = processPort;
+    otherRouter.status = RouterStatus.INIT;
+
+    // Finds open link in our ports array
+    int openIndex = 0;
+    for (int i = 0; i < 4; i ++) {
+      if (ports[i] == null) {
+        openIndex = i;
+        break;
+      }
+    }
+    System.out.println("Open Link at ports[" + openIndex + "]");
+
+    // Add Link to ports[]
+    Link newLink = new Link(rd, otherRouter);
+    ports[openIndex] = newLink;
 
   }
+
+  private void flushLinks() {
+    ports = new Link[4];
+  }
+
 
   /**
    * broadcast Hello to neighbors
    */
   private void processStart() {
+    System.out.println("Starting Router...");
+    System.out.println("Process IP: " + rd.processIPAddress);
+    System.out.println("Simulated IP: " + rd.simulatedIPAddress);
+    System.out.println("Open port: " + rd.processPortNumber);
+
+    Socket startingSocket;
+    PrintWriter startingStream;
+
+    // Attempt to contact other router
+    for (int i = 0; i < 4; i++) {
+        try {
+          startingSocket = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
+          startingStream = new PrintWriter(startingSocket.getOutputStream(), true);
+        }
+        catch (IOException io) {
+            System.out.println("Unable to delcare socket");
+        }
+        catch (NullPointerException e) {
+        }
+    }
 
   }
 
@@ -76,6 +146,7 @@ public class Router {
    * output the neighbors of the routers
    */
   private void processNeighbors() {
+    System.out.println("WE BE SEEIN NEIGHBORS UP IN HERE CHA FEEL");
 
   }
 
@@ -114,9 +185,16 @@ public class Router {
         } else if (command.equals("neighbors")) {
           //output neighbors
           processNeighbors();
-        } else {
-          //invalid command
+        } else if (command.equals("flushLinks")) {
+          //output neighbors
+          flushLinks();
+        }else if (command.equals("quit")) {
+          System.out.println("Quitting...");
           break;
+        }
+        else {
+          //invalid command
+          System.out.println("Incorrect Command");
         }
         System.out.print(">> ");
         command = br.readLine();
