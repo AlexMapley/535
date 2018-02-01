@@ -35,7 +35,6 @@ public class Router {
                   ServerSocket serverSocket = new ServerSocket(rd.processPortNumber);
                   Socket routerSocket = serverSocket.accept();
                   ObjectInputStream inFromRouters = new ObjectInputStream(routerSocket.getInputStream());
-                  ObjectOutputStream outToRouters;
                   SOSPFPacket inPacket = new SOSPFPacket();
 
                   while (true) {
@@ -45,11 +44,11 @@ public class Router {
                       inPacket = (SOSPFPacket) inFromRouters.readObject();
                     }
                     catch(Exception e){
-
+                      System.out.println(e);
                     }
                       boolean seenRouter = false;
                       for (int i = 0; i < 4; i++) {
-                        if ((ports[i] != null) && ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
+                        if (ports[i] != null && ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
                           seenRouter = true;
                         }
                       }
@@ -70,6 +69,11 @@ public class Router {
                         }
                       }
 
+                      // Declare outgoing socket
+                      // ServerSocket serverOut = new ServerSocket(inPacket.srcProcessPort);
+                      // Socket outSocket = serverOut.accept();
+                      Socket outSocket = new Socket(inPacket.srcProcessIP, inPacket.srcProcessPort);
+                      ObjectOutputStream outToRouters = new ObjectOutputStream(outSocket.getOutputStream());
 
                       // Incoming 0 (Hello) packet
                       if (inPacket.sospfType == 0) {
@@ -82,7 +86,6 @@ public class Router {
                         outPacket.srcIP = rd.simulatedIPAddress;
                         outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                         outPacket.sospfType = 1; // We are sending the second handshake, ie. 1 (hey)
-
                         outToRouters.writeObject(outPacket);
                         System.out.println("Received 0 packet");
 
@@ -90,7 +93,6 @@ public class Router {
 
                       // Incoming 1 (Hey) packet
                       if (inPacket.sospfType == 1) {
-                          System.out.println("breakpoint 1");
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
 
                         // Need to send response
@@ -100,10 +102,11 @@ public class Router {
                         outPacket.srcIP = rd.simulatedIPAddress;
                         outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                         outPacket.sospfType = 2; // We are sending the second handshake, ie. 1 (hey)
-                          System.out.println("breakpoint 2");
                         outToRouters.writeObject(outPacket);
                         System.out.println("Received 1 packet");
                       }
+
+                      // Incoming 2 (final handshake) packet
                       if (inPacket.sospfType == 2) {
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                         System.out.println("Received 2 packet");
@@ -111,7 +114,7 @@ public class Router {
 
                   }
               } catch (IOException e) {
-                  System.err.println("Accept failed.");
+                  System.err.println(e);
               }
 
           }
