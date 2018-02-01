@@ -34,13 +34,64 @@ public class Router {
               try {
                   ServerSocket routerSocket = new ServerSocket(rd.processPortNumber);
                   ObjectInputStream inFromRouters = new ObjectInputStream(routerSocket.getInputStream());
-                  ObjectOutputStream outFromRouters = new ObjectOutputStream(routerSocket.getOutputStream());
+                  ObjectOutputStream outToRouters = new ObjectOutputStream(routerSocket.getOutputStream());
                   SOSPFPacket inPacket = new SOSPFPacket();
-                  SOSPFPacket outPacket = new SOSPFPacket();
 
                   while (true) {
-                      Socket listenerSocket = routerSocket.accept();
-                      //ObjectOutputStream objectout = new ObjectOutputStream(listenerSocket.getOutputStream());
+
+                      // Read and process incoming packets
+                      inPacket = (SOSPFPacket)inFromRouters.readObject();
+                      boolean seenRouter = false;
+                      for (int i = 0; i < 4; i++) {
+                        if (ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
+                          seenRouter = true;
+                        }
+                      }
+
+                      // If new router, we need to attach it
+                      if (seenRouter == false) {
+                        processAttach(
+                        inPacket.srcProcessIP, inPacket.srcProcessPort,
+                        inPacket.srcIP, 1
+                        );
+                      }
+
+                      // Get index of router in ports[]
+                      int routerIndex = 0;
+                      for (int i = 0; i < 4; i++) {
+                        if ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
+                          routerIndex = i;
+                        }
+                      }
+
+                      // Incoming 0 (Hello) packet
+                      if (inPacket.sospfType == 0) {
+                        ports[routerIndex].router2.status = RouterStatus.INIT;
+
+                        // Need to send response
+                        SOSPFPacket outPacket = new SOSPFPacket();
+                        outPacket.srcProcessIP = "127.0.0.1";
+                        outPacket.srcProcessPort = rd.processPortNumber;
+                        outPacket.srcIP = rd.simulatedIPAddress;
+                        outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                        outPacket.sospfType = 1; // We are sending the second handshake, ie. 1 (hey)
+                        outToRouters.writeObject(outPacket);
+                      }
+
+                      // Incoming 1 (Hey) packet
+                      if (inPacket.sospfType == 1) {
+                        ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
+
+                        // Need to send response
+                        SOSPFPacket outPacket = new SOSPFPacket();
+                        outPacket.srcProcessIP = "127.0.0.1";
+                        outPacket.srcProcessPort = rd.processPortNumber;
+                        outPacket.srcIP = rd.simulatedIPAddress;
+                        outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                        outPacket.sospfType = 1; // We are sending the second handshake, ie. 1 (hey)
+                        outToRouters.writeObject(outPacket);
+                      }
+
                   }
               } catch (IOException e) {
                   System.err.println("Accept failed.");
@@ -127,7 +178,7 @@ public class Router {
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
-                  ports[i].status = RouterStatus.INIT;
+                  ports[i].router2.status = RouterStatus.INIT;
                   helloSocket = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
                   outToRouters = new ObjectOutputStream(helloSocket.getOutputStream());
                   SOSPFPacket helloPacket = new SOSPFPacket();
