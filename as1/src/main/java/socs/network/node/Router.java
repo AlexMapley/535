@@ -34,18 +34,19 @@ public class Router {
               try {
                   ServerSocket serverSocket = new ServerSocket(rd.processPortNumber);
                   Socket routerSocket = serverSocket.accept();
-                  ObjectInputStream inFromRouters = new ObjectInputStream(routerSocket.getInputStream());
+                  ObjectInputStream inFromRouters = new ObjectInputStream(new BufferedInputStream(routerSocket.getInputStream()));
                   SOSPFPacket inPacket = new SOSPFPacket();
 
                   while (true) {
 
                       // Read and process incoming packets
-                    try {
-                      inPacket = (SOSPFPacket) inFromRouters.readObject();
-                    }
-                    catch(Exception e){
-                      System.out.println(e);
-                    }
+                      try {
+                        inPacket = (SOSPFPacket) inFromRouters.readObject();
+                      }
+                      catch(Exception e){
+                        System.out.println(e);
+                      }
+                      System.out.println("Packet Received!!!!!");
                       boolean seenRouter = false;
                       for (int i = 0; i < 4; i++) {
                         if (ports[i] != null && ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
@@ -70,13 +71,14 @@ public class Router {
                       }
 
                       // Declare outgoing socket
-                      // ServerSocket serverOut = new ServerSocket(inPacket.srcProcessPort);
-                      // Socket outSocket = serverOut.accept();
                       Socket outSocket = new Socket(inPacket.srcProcessIP, inPacket.srcProcessPort);
                       ObjectOutputStream outToRouters = new ObjectOutputStream(outSocket.getOutputStream());
 
+
                       // Incoming 0 (Hello) packet
                       if (inPacket.sospfType == 0) {
+                        System.out.println("Received packet 0, sending packet 1");
+                        System.out.println("Sending to port: " +  inPacket.srcProcessPort);
                         ports[routerIndex].router2.status = RouterStatus.INIT;
 
                         // Need to send response
@@ -87,12 +89,13 @@ public class Router {
                         outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                         outPacket.sospfType = 1; // We are sending the second handshake, ie. 1 (hey)
                         outToRouters.writeObject(outPacket);
-                        System.out.println("Received 0 packet");
-
+                        //outToRouters.flush();
                       }
 
                       // Incoming 1 (Hey) packet
                       if (inPacket.sospfType == 1) {
+                        System.out.println("Received packet 1, sending packet 2");
+                        System.out.println("Sending to port: " +  inPacket.srcProcessPort);
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
 
                         // Need to send response
@@ -101,17 +104,21 @@ public class Router {
                         outPacket.srcProcessPort = rd.processPortNumber;
                         outPacket.srcIP = rd.simulatedIPAddress;
                         outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                        outPacket.sospfType = 2; // We are sending the second handshake, ie. 1 (hey)
+                        outPacket.sospfType = 2; // We are sending the third handshake, ie. 2 (hey)
                         outToRouters.writeObject(outPacket);
-                        System.out.println("Received 1 packet");
+                        //outToRouters.flush();
+                        System.out.println("Sent packet 2");
                       }
 
                       // Incoming 2 (final handshake) packet
                       if (inPacket.sospfType == 2) {
+                        System.out.println("Received packet 2, finished handshake");
+                        System.out.println("Sending to port: " +  inPacket.srcProcessPort);
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
-                        System.out.println("Received 2 packet");
                       }
-
+                    System.out.println("break1");
+                    outSocket.close();
+                    System.out.println("break2");
                   }
               } catch (IOException e) {
                   System.err.println(e);
@@ -183,10 +190,10 @@ public class Router {
    * broadcast Hello to neighbors
    */
   private void processStart() {
-    System.out.println("Starting Router...");
-    System.out.println("Process IP: " + rd.processIPAddress);
-    System.out.println("Simulated IP: " + rd.simulatedIPAddress);
-    System.out.println("Open port: " + rd.processPortNumber);
+    // System.out.println("Starting Router...");
+    // System.out.println("Process IP: " + rd.processIPAddress);
+    // System.out.println("Simulated IP: " + rd.simulatedIPAddress);
+    // System.out.println("Open port: " + rd.processPortNumber);
 
     // Attempt to contact other routers
     Runnable routerPinger = new Runnable() {
