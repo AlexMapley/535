@@ -1,5 +1,7 @@
 package socs.network.node;
 
+import socs.network.message.*;
+
 import socs.network.util.Configuration;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -31,6 +33,10 @@ public class Router {
 
               try {
                   ServerSocket routerSocket = new ServerSocket(rd.processPortNumber);
+                  ObjectInputStream inFromRouters = new ObjectInputStream(routerSocket.getInputStream());
+                  ObjectOutputStream outFromRouters = new ObjectOutputStream(routerSocket.getOutputStream());
+                  SOSPFPacket inPacket = new SOSPFPacket();
+                  SOSPFPacket outPacket = new SOSPFPacket();
 
                   while (true) {
                       Socket listenerSocket = routerSocket.accept();
@@ -95,7 +101,6 @@ public class Router {
     // Add Link to ports[]
     Link newLink = new Link(rd, otherRouter);
     ports[openIndex] = newLink;
-
   }
 
   private void flushLinks() {
@@ -112,22 +117,35 @@ public class Router {
     System.out.println("Simulated IP: " + rd.simulatedIPAddress);
     System.out.println("Open port: " + rd.processPortNumber);
 
-    Socket startingSocket;
-    PrintWriter startingStream;
+    // Attempt to contact other routers
+    Runnable routerPinger = new Runnable() {
+          @Override
+          public void run() {
+            Socket helloSocket;
+            ObjectOutputStream outToRouters;
 
-    // Attempt to contact other router
-    for (int i = 0; i < 4; i++) {
-        try {
-          startingSocket = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
-          startingStream = new PrintWriter(startingSocket.getOutputStream(), true);
-        }
-        catch (IOException io) {
-            System.out.println("Unable to delcare socket");
-        }
-        catch (NullPointerException e) {
-        }
-    }
-
+            for (int i = 0; i < 4; i++) {
+              if (ports[i] != null) {
+                try {
+                  ports[i].status = RouterStatus.INIT;
+                  helloSocket = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
+                  outToRouters = new ObjectOutputStream(helloSocket.getOutputStream());
+                  SOSPFPacket helloPacket = new SOSPFPacket();
+                  helloPacket.srcProcessIP = "127.0.0.1";
+                  helloPacket.srcProcessPort = rd.processPortNumber;
+                  helloPacket.srcIP = rd.simulatedIPAddress;
+                  helloPacket.dstIP = ports[i].router2.processIPAddress;
+                  helloPacket.sospfType = 0; // We are sending the first handshake, ie. HELLO
+                  outToRouters.writeObject(helloPacket);
+                }
+                catch (IOException io) {
+                    System.out.println("Unable to delcare socket");
+                }
+              }
+            }
+          }
+      };
+    new Thread(routerPinger).start();
   }
 
   /**
