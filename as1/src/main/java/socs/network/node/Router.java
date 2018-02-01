@@ -32,18 +32,24 @@ public class Router {
           public void run() {
 
               try {
-                  ServerSocket routerSocket = new ServerSocket(rd.processPortNumber);
+                  ServerSocket serverSocket = new ServerSocket(rd.processPortNumber);
+                  Socket routerSocket = serverSocket.accept();
                   ObjectInputStream inFromRouters = new ObjectInputStream(routerSocket.getInputStream());
-                  ObjectOutputStream outToRouters = new ObjectOutputStream(routerSocket.getOutputStream());
+                  ObjectOutputStream outToRouters;
                   SOSPFPacket inPacket = new SOSPFPacket();
 
                   while (true) {
 
                       // Read and process incoming packets
-                      inPacket = (SOSPFPacket)inFromRouters.readObject();
+                    try {
+                      inPacket = (SOSPFPacket) inFromRouters.readObject();
+                    }
+                    catch(Exception e){
+
+                    }
                       boolean seenRouter = false;
                       for (int i = 0; i < 4; i++) {
-                        if (ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
+                        if ((ports[i] != null) && ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
                           seenRouter = true;
                         }
                       }
@@ -52,17 +58,18 @@ public class Router {
                       if (seenRouter == false) {
                         processAttach(
                         inPacket.srcProcessIP, inPacket.srcProcessPort,
-                        inPacket.srcIP, 1
+                        inPacket.srcIP,  (short)1
                         );
                       }
 
                       // Get index of router in ports[]
-                      int routerIndex = 0;
+                      int routerIndex = -1;
                       for (int i = 0; i < 4; i++) {
-                        if ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
+                        if ((ports[i] != null) && ports[i].router2.simulatedIPAddress == inPacket.srcIP){
                           routerIndex = i;
                         }
                       }
+
 
                       // Incoming 0 (Hello) packet
                       if (inPacket.sospfType == 0) {
@@ -75,11 +82,15 @@ public class Router {
                         outPacket.srcIP = rd.simulatedIPAddress;
                         outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                         outPacket.sospfType = 1; // We are sending the second handshake, ie. 1 (hey)
+
                         outToRouters.writeObject(outPacket);
+                        System.out.println("Received 0 packet");
+
                       }
 
                       // Incoming 1 (Hey) packet
                       if (inPacket.sospfType == 1) {
+                          System.out.println("breakpoint 1");
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
 
                         // Need to send response
@@ -88,8 +99,14 @@ public class Router {
                         outPacket.srcProcessPort = rd.processPortNumber;
                         outPacket.srcIP = rd.simulatedIPAddress;
                         outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                        outPacket.sospfType = 1; // We are sending the second handshake, ie. 1 (hey)
+                        outPacket.sospfType = 2; // We are sending the second handshake, ie. 1 (hey)
+                          System.out.println("breakpoint 2");
                         outToRouters.writeObject(outPacket);
+                        System.out.println("Received 1 packet");
+                      }
+                      if (inPacket.sospfType == 2) {
+                        ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
+                        System.out.println("Received 2 packet");
                       }
 
                   }
