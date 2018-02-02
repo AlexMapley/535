@@ -33,11 +33,16 @@ public class Router {
 
               try {
                   ServerSocket serverSocket = new ServerSocket(rd.processPortNumber);
-                  Socket routerSocket = serverSocket.accept();
-                  ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(routerSocket.getInputStream()));
+                  // Socket routerSocket = serverSocket.accept();
+                  // ObjectInputStream ois = new ObjectInputStream(routerSocket.getInputStream());
+                  // ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(routerSocket.getInputStream()));
+
                   SOSPFPacket inPacket = new SOSPFPacket();
 
                   while (true) {
+
+                    Socket routerSocket = serverSocket.accept();
+                    ObjectInputStream ois = new ObjectInputStream(routerSocket.getInputStream());
 
                       // Wait for a packet to come in
                       System.out.print("Waiting for another packet...\n>>");
@@ -179,7 +184,7 @@ public class Router {
     otherRouter.status = RouterStatus.INIT;
 
     // Finds open link in our ports array
-    int openIndex = 0;
+    int openIndex = -1;
     boolean hasDescription = false;
     for (int i = 0; i < 4; i ++) {
       if (ports[i] == null) {
@@ -191,7 +196,7 @@ public class Router {
       }
     }
 
-    if (hasDescription == false) {
+    if (hasDescription == false && openIndex != -1) {
       // Add Link to ports[]
       System.out.println("Establishing new link at ports[" + openIndex + "]");
       Link newLink = new Link(rd, otherRouter);
@@ -221,8 +226,8 @@ public class Router {
     Runnable routerPinger = new Runnable() {
           @Override
           public void run() {
-            Socket helloSocket;
-            ObjectOutputStream ois;
+            Socket helloSocket = null;
+            ObjectOutputStream ois = null;
 
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
@@ -248,7 +253,14 @@ public class Router {
                 }
               }
             }
+          try {
+            helloSocket.close();
+            ois.close();
           }
+          catch (Exception e) {
+            System.err.println(e);
+          }
+        }
       };
     new Thread(routerPinger).start();
   }
