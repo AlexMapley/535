@@ -243,6 +243,9 @@ public class Router {
    */
   private void processNeighbors() {
     System.out.println("WE BE SEEIN NEIGHBORS UP IN HERE CHA FEEL");
+      for (Link l: ports) {
+          System.out.println( l.router2.simulatedIPAddress)
+      }
 
   }
 
