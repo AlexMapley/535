@@ -33,10 +33,6 @@ public class Router {
 
               try {
                   ServerSocket serverSocket = new ServerSocket(rd.processPortNumber);
-                  // Socket routerSocket = serverSocket.accept();
-                  // ObjectInputStream ois = new ObjectInputStream(routerSocket.getInputStream());
-                  // ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(routerSocket.getInputStream()));
-
                   SOSPFPacket inPacket = new SOSPFPacket();
 
                   while (true) {
@@ -134,9 +130,10 @@ public class Router {
                       }
 
                       // Close outgoing socket and stream
-                      oos.reset();
                       oos.close();
                       outSocket.close();
+                      routerSocket.close();
+                      ois.close();
                   }
               } catch (IOException e) {
                   System.err.println(e);
@@ -227,14 +224,14 @@ public class Router {
           @Override
           public void run() {
             Socket helloSocket = null;
-            ObjectOutputStream ois = null;
+            ObjectOutputStream oos = null;
 
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
                   ports[i].router2.status = RouterStatus.INIT;
                   helloSocket = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
-                  ois = new ObjectOutputStream(helloSocket.getOutputStream());
+                  oos = new ObjectOutputStream(helloSocket.getOutputStream());
                   SOSPFPacket outPacket = new SOSPFPacket();
                   outPacket.srcProcessIP = "127.0.0.1";
                   outPacket.srcProcessPort = rd.processPortNumber;
@@ -242,10 +239,10 @@ public class Router {
                   outPacket.srcIP = rd.simulatedIPAddress;
                   outPacket.dstIP = ports[i].router2.processIPAddress;
                   outPacket.sospfType = 0; // We are sending the first handshake, ie. HELLO
-                  ois.writeObject(outPacket);
+                  oos.writeObject(outPacket);
                   outPacket.printPacket("Outgoing");
                   helloSocket.close();
-                  ois.close();
+                  oos.close();
                 }
                 catch (Exception e) {
                     System.out.println("Unable to write to socket");
@@ -253,13 +250,6 @@ public class Router {
                 }
               }
             }
-          try {
-            helloSocket.close();
-            ois.close();
-          }
-          catch (Exception e) {
-            System.err.println(e);
-          }
         }
       };
     new Thread(routerPinger).start();
