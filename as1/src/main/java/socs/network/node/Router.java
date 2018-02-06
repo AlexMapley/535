@@ -231,9 +231,6 @@ public class Router {
               if (ports[i] != null) {
                 try {
                   ports[i].router2.status = RouterStatus.INIT;
-                  //startupSocket = ports[i].clientSocket;
-
-
                   SOSPFPacket outPacket = new SOSPFPacket();
                   outPacket.srcProcessIP = "127.0.0.1";
                   outPacket.srcProcessPort = rd.processPortNumber;
