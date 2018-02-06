@@ -227,9 +227,6 @@ public class Router {
     Runnable routerPinger = new Runnable() {
           @Override
           public void run() {
-            // Socket startupSocket = null;
-            ObjectOutputStream oos = null;
-
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
