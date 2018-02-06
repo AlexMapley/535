@@ -1,5 +1,4 @@
 package socs.network.node;
-import java.net.Socket;
 
 public class Link {
 
