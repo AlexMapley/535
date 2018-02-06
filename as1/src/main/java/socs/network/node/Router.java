@@ -48,8 +48,6 @@ public class Router {
                       inPacket = null;
 
                       // Read and process incoming packets
-                      // inPacket = (SOSPFPacket) ois.readObject();
-                      // Note:
                       // This is still foobar, shouldnt need while loop read
                       while (inPacket == null) {
                         try {
@@ -88,10 +86,6 @@ public class Router {
                         }
                       }
 
-                      // Declare outgoing socket
-                      //Socket outSocket = new Socket(inPacket.srcProcessIP, inPacket.srcProcessPort);
-
-
                       // Incoming 0 packet -> Outgoing 1 packet
                       if (inPacket.sospfType == 0) {
                         ports[routerIndex].router2.status = RouterStatus.INIT;
@@ -117,7 +111,6 @@ public class Router {
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                         try {
                           // Need to send response
-                          System.out.println("Made it this far, at Router 117");
                           SOSPFPacket outPacket = new SOSPFPacket();
                           outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
                           outPacket.srcProcessPort = rd.processPortNumber;
@@ -138,10 +131,7 @@ public class Router {
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                       }
 
-                      // Close outgoing socket and stream
-                      // oos.close();
-                      //clientSockets[routerIndex].shutdownOutput();
-                      //outSocket.close();
+                      // Flush output Stream
                       clientStreams[routerIndex].flush();
                   }
               } catch (IOException e) {
@@ -257,9 +247,6 @@ public class Router {
                   clientStreams[i].writeObject(outPacket);
                   clientStreams[i].flush();
                   outPacket.printPacket("Outgoing");
-                  //startupSocket.close();
-                  //oos.close();
-                  //clientSockets[i].shutdownOutput();
                 }
                 catch (Exception e) {
                     System.out.println("Unable to write to socket");
