@@ -19,6 +19,10 @@ public class Router {
 
   //assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
+  Socket[] clientSockets = new Socket[4];
+  ObjectOutputStream[] clientStreams = new ObjectOutputStream[4];
+
+
 
   public Router(Configuration config) {
     rd.simulatedIPAddress = config.getString("socs.network.router.ip");
@@ -34,24 +38,28 @@ public class Router {
               try {
                   ServerSocket serverSocket = new ServerSocket(rd.processPortNumber);
                   SOSPFPacket inPacket = new SOSPFPacket();
+                  Socket inSocket = serverSocket.accept();
+                  ObjectInputStream ois = new ObjectInputStream(inSocket.getInputStream());
 
                   while (true) {
-
-                    Socket routerSocket = serverSocket.accept();
-                    ObjectInputStream ois = new ObjectInputStream(routerSocket.getInputStream());
 
                       // Wait for a packet to come in
                       System.out.print("Waiting for another packet...\n>>");
                       inPacket = null;
-                      while(inPacket == null) {
+
+                      // Read and process incoming packets
+                      // This is still foobar, shouldnt need while loop read
+                      while (inPacket == null) {
                         try {
-                          // Read and process incoming packets
                           inPacket = (SOSPFPacket) ois.readObject();
                         }
-                        catch(Exception e){
-                          //System.out.println(e);
+                        catch (ClassNotFoundException e) {
+                          System.err.println(e);
+                        }
+                        catch (IOException e) {
                         }
                       }
+
                       System.out.println("packet received");
 
                       boolean seenRouter = false;
@@ -78,25 +86,20 @@ public class Router {
                         }
                       }
 
-                      // Declare outgoing socket
-                      Socket outSocket = new Socket(inPacket.srcProcessIP, inPacket.srcProcessPort);
-                      ObjectOutputStream oos = new ObjectOutputStream(outSocket.getOutputStream());
-
-
                       // Incoming 0 packet -> Outgoing 1 packet
                       if (inPacket.sospfType == 0) {
                         ports[routerIndex].router2.status = RouterStatus.INIT;
                         try {
                           // Need to send response
                           SOSPFPacket outPacket = new SOSPFPacket();
-                          outPacket.srcProcessIP = "127.0.0.1";
+                          outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
                           outPacket.srcProcessPort = rd.processPortNumber;
                           outPacket.dstProcessPort = inPacket.srcProcessPort;
                           outPacket.srcIP = rd.simulatedIPAddress;
                           outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                          outPacket.sospfType = 1; // We are sending the second handshake, ie. 1 (hey)
+                          outPacket.sospfType = 1; // We are sending the second handshake, ie. 1
                           outPacket.printPacket("Outgoing");
-                          oos.writeObject(outPacket);
+                          clientStreams[routerIndex].writeObject(outPacket);
                         }
                         catch (Exception e) {
                           System.out.println(e);
@@ -106,18 +109,17 @@ public class Router {
                       // Incoming 1 packet -> Outgoing 2 packet
                       if (inPacket.sospfType == 1) {
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
-
                         try {
                           // Need to send response
                           SOSPFPacket outPacket = new SOSPFPacket();
-                          outPacket.srcProcessIP = "127.0.0.1";
+                          outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
                           outPacket.srcProcessPort = rd.processPortNumber;
                           outPacket.dstProcessPort = inPacket.srcProcessPort;
                           outPacket.srcIP = rd.simulatedIPAddress;
                           outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                          outPacket.sospfType = 2; // We are sending the third handshake, ie. 2 (hey)
+                          outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
                           outPacket.printPacket("Outgoing");
-                          oos.writeObject(outPacket);
+                          clientStreams[routerIndex].writeObject(outPacket);
                         }
                         catch (Exception e) {
                           System.out.println(e);
@@ -129,15 +131,13 @@ public class Router {
                         ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                       }
 
-                      // Close outgoing socket and stream
-                      oos.close();
-                      outSocket.close();
-                      routerSocket.close();
-                      ois.close();
+                      // Flush output Stream
+                      clientStreams[routerIndex].flush();
                   }
               } catch (IOException e) {
                   System.err.println(e);
               }
+
           }
       };
     new Thread(listener).start();
@@ -198,6 +198,14 @@ public class Router {
       System.out.println("Establishing new link at ports[" + openIndex + "]");
       Link newLink = new Link(rd, otherRouter);
       ports[openIndex] = newLink;
+      try {
+        clientSockets[openIndex] = new Socket(otherRouter.processIPAddress, otherRouter.processPortNumber);
+        clientStreams[openIndex] = new ObjectOutputStream(clientSockets[openIndex].getOutputStream());
+      }
+      catch (Exception e) {
+        System.err.println("Trouble creating socket in attach function");
+        System.err.println(e);
+      }
     }
   }
 
@@ -211,27 +219,18 @@ public class Router {
 
 
   /**
-   * broadcast Hello to neighbors
+   * broadcast Tcp handhshake to neighbors
    */
   private void processStart() {
-    // System.out.println("Starting Router...");
-    // System.out.println("Process IP: " + rd.processIPAddress);
-    // System.out.println("Simulated IP: " + rd.simulatedIPAddress);
-    // System.out.println("Open port: " + rd.processPortNumber);
 
     // Attempt to contact other routers
     Runnable routerPinger = new Runnable() {
           @Override
           public void run() {
-            Socket helloSocket = null;
-            ObjectOutputStream oos = null;
-
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
                   ports[i].router2.status = RouterStatus.INIT;
-                  helloSocket = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
-                  oos = new ObjectOutputStream(helloSocket.getOutputStream());
                   SOSPFPacket outPacket = new SOSPFPacket();
                   outPacket.srcProcessIP = "127.0.0.1";
                   outPacket.srcProcessPort = rd.processPortNumber;
@@ -239,10 +238,9 @@ public class Router {
                   outPacket.srcIP = rd.simulatedIPAddress;
                   outPacket.dstIP = ports[i].router2.processIPAddress;
                   outPacket.sospfType = 0; // We are sending the first handshake, ie. HELLO
-                  oos.writeObject(outPacket);
+                  clientStreams[i].writeObject(outPacket);
+                  clientStreams[i].flush();
                   outPacket.printPacket("Outgoing");
-                  helloSocket.close();
-                  oos.close();
                 }
                 catch (Exception e) {
                     System.out.println("Unable to write to socket");
