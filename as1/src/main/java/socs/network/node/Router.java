@@ -322,10 +322,8 @@ public class Router {
           //output neighbors
           processNeighbors();
         } else if (command.equals("flushLinks")) {
-          //output neighbors
           flushLinks();
         } else if (command.equals("clear")) {
-          //output neighbors
           clear();
         } else if (command.equals("quit")) {
           System.out.println("Quitting...");
