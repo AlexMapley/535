@@ -70,11 +70,11 @@ public class Router {
                       }
                       inPacket.printPacket("Incoming");
 
-                      // If new router, we need to attach it
+                      // If this is a new router, we need to attach it
                       if (seenRouter == false) {
                         processAttach(
                         inPacket.srcProcessIP, inPacket.srcProcessPort,
-                        inPacket.srcIP,  (short) 1
+                        inPacket.srcIP, (short) 1
                         );
                       }
 
@@ -193,17 +193,19 @@ public class Router {
       }
     }
 
+
     if (hasDescription == false && openIndex != -1) {
       // Add Link to ports[]
       System.out.println("Establishing new link at ports[" + openIndex + "]");
       Link newLink = new Link(rd, otherRouter);
       ports[openIndex] = newLink;
+
       try {
         clientSockets[openIndex] = new Socket(otherRouter.processIPAddress, otherRouter.processPortNumber);
         clientStreams[openIndex] = new ObjectOutputStream(clientSockets[openIndex].getOutputStream());
       }
       catch (Exception e) {
-        System.err.println("Trouble creating socket in attach function");
+        System.err.println("Trouble creating socket in start function");
         System.err.println(e);
       }
     }
@@ -230,6 +232,8 @@ public class Router {
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
+
+                  // Contact Router
                   ports[i].router2.status = RouterStatus.INIT;
                   SOSPFPacket outPacket = new SOSPFPacket();
                   outPacket.srcProcessIP = "127.0.0.1";
@@ -271,7 +275,7 @@ public class Router {
   private void processNeighbors() {
       for (int i = 0; i < 4; i++) {
         if(ports[i] != null) {
-          System.out.println("Neighbor " + i + " IP: " + ports[i].router2.simulatedIPAddress + " | " + ports[i].router2.status);
+          System.out.println("Neighbor " + i + " | IP: " + ports[i].router2.simulatedIPAddress + " | " + ports[i].router2.status);
         }
       }
   }
@@ -281,6 +285,12 @@ public class Router {
    */
   private void processQuit() {
 
+  }
+
+  private void clear() {
+    for(int i = 0; i < 75; i++) {
+      System.out.println();
+    }
   }
 
   public void terminal() {
@@ -314,7 +324,10 @@ public class Router {
         } else if (command.equals("flushLinks")) {
           //output neighbors
           flushLinks();
-        }else if (command.equals("quit")) {
+        } else if (command.equals("clear")) {
+          //output neighbors
+          clear();
+        } else if (command.equals("quit")) {
           System.out.println("Quitting...");
           break;
         }
