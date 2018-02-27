@@ -116,9 +116,7 @@ public class Router {
                           outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                           outPacket.sospfType = 1; // We are sending the second handshake, ie. 1
                           outPacket.printPacket("Outgoing");
-                          System.out.println("CHECK1");
                           oos.writeObject(outPacket);
-                          System.out.println("CHECK2");
                         }
                         catch (Exception e) {
                           System.out.println(e);
@@ -223,15 +221,6 @@ public class Router {
       System.out.println("Establishing new link at ports[" + openIndex + "]");
       Link newLink = new Link(rd, otherRouter);
       ports[openIndex] = newLink;
-
-      // try {
-      //   clientSockets[openIndex] = new Socket(otherRouter.processIPAddress, otherRouter.processPortNumber);
-      //   clientStreams[openIndex] = new ObjectOutputStream(clientSockets[openIndex].getOutputStream());
-      // }
-      // catch (Exception e) {
-      //   System.err.println("Trouble creating socket in attach function");
-      //   System.err.println(e);
-      // }
     }
   }
 
