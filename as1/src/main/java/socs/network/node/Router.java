@@ -13,15 +13,16 @@ import java.net.Socket;
 
 public class Router {
 
-  protected LinkStateDatabase lsd;
-
   RouterDescription rd = new RouterDescription();
 
-  //assuming that all routers are with 4 ports
+  // Assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
   Socket[] clientSockets = new Socket[4];
   ObjectOutputStream[] clientStreams = new ObjectOutputStream[4];
 
+
+  // Init Link State Database
+  LinkStateDatabase lsd = new LinkStateDatabase(rd);
 
 
   public Router(Configuration config) {
@@ -36,6 +37,8 @@ public class Router {
           public void run() {
 
               try {
+
+
                   ServerSocket serverSocket = new ServerSocket(rd.processPortNumber);
                   SOSPFPacket inPacket = new SOSPFPacket();
                   Socket inSocket = serverSocket.accept();
@@ -205,7 +208,7 @@ public class Router {
         clientStreams[openIndex] = new ObjectOutputStream(clientSockets[openIndex].getOutputStream());
       }
       catch (Exception e) {
-        System.err.println("Trouble creating socket in start function");
+        System.err.println("Trouble creating socket in process function");
         System.err.println(e);
       }
     }
@@ -219,11 +222,17 @@ public class Router {
     System.out.println(">>");
   }
 
+  private void lsa() {
+    System.out.println(lsd.toString());
+  }
+
 
   /**
    * broadcast Tcp handhshake to neighbors
    */
   private void processStart() {
+
+
 
     // Attempt to contact other routers
     Runnable routerPinger = new Runnable() {
@@ -242,9 +251,30 @@ public class Router {
                   outPacket.srcIP = rd.simulatedIPAddress;
                   outPacket.dstIP = ports[i].router2.processIPAddress;
                   outPacket.sospfType = 0; // We are sending the first handshake, ie. HELLO
+
+                  System.out.println("nullP 1");
+
                   clientStreams[i].writeObject(outPacket);
                   clientStreams[i].flush();
                   outPacket.printPacket("Outgoing");
+
+                  System.out.println("nullP 2");
+
+                  // Update Link State Database
+                  LSA lsa = new LSA();
+                  lsa.linkStateID = rd.simulatedIPAddress;
+                  lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                  LinkDescription ld = new LinkDescription();
+                  ld.linkID = ports[i].router2.simulatedIPAddress;
+                  ld.portNum = -1;
+                  ld.tosMetrics = 0;
+                  lsa.links.add(ld);
+                  lsd.store(lsa);
+
+                  System.out.println("nullP 3?");
+
+
+
                 }
                 catch (Exception e) {
                     System.out.println("Unable to write to socket");
@@ -325,6 +355,8 @@ public class Router {
           flushLinks();
         } else if (command.equals("clear")) {
           clear();
+        }else if (command.equals("lsa")) {
+          lsa();
         } else if (command.equals("quit")) {
           System.out.println("Quitting...");
           break;

@@ -18,6 +18,10 @@ public class LinkStateDatabase {
     _store.put(l.linkStateID, l);
   }
 
+  public void store(LSA lsa) {
+    _store.put(lsa.linkStateID, lsa);
+  }
+
   /**
    * output the shortest path from this router to the destination with the given IP address
    */
