@@ -17,9 +17,6 @@ public class Router {
 
   // Assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
-  // Socket[] clientSockets = new Socket[4];
-  // ObjectOutputStream[] clientStreams = new ObjectOutputStream[4];
-
 
   // Init Link State Database
   LinkStateDatabase lsd = new LinkStateDatabase(rd);
@@ -97,11 +94,14 @@ public class Router {
                   }
                   catch (InterruptedException e) {
                   }
+                  if (!(inPacket == null)) {
+                    break;
+                  }
                   attempts++;
                 }
 
                 // Packet Timeout
-                if(attempts == 12) {
+                if(attempts == 10) {
                   break;
                 }
 
@@ -178,6 +178,18 @@ public class Router {
 
                     // Socket connection thread must stay alive
                     sequenceConcluded = false;
+
+                    // Update Link State Database
+                    LSA lsa = new LSA();
+                    lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
+                    lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                    LinkDescription ld = new LinkDescription();
+                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+                    ld.portNum = inPacket.srcProcessPort;
+                    ld.tosMetrics = 999;
+                    lsa.links.add(ld);
+                    System.out.println("LSA from start:" + "\n" + lsa.toString());
+                    lsd.store(lsa);
                   }
                   catch (Exception e) {
                     // This is super annoying, don't print
@@ -188,6 +200,18 @@ public class Router {
                 // Incoming 2 packet
                 if (inPacket.sospfType == 2) {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
+
+                  // Update Link State Database
+                  LSA lsa = new LSA();
+                  lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
+                  lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                  LinkDescription ld = new LinkDescription();
+                  ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+                  ld.portNum = inPacket.srcProcessPort;
+                  ld.tosMetrics = 0;
+                  lsa.links.add(ld);
+                  System.out.println("LSA from start:" + "\n" + lsa.toString());
+                  lsd.store(lsa);
                 }
 
                 // Close Streams
@@ -272,7 +296,7 @@ public class Router {
     System.out.println(">>");
   }
 
-  private void lsa() {
+  private void lsd() {
     System.out.println(lsd.toString());
   }
 
@@ -316,18 +340,6 @@ public class Router {
                   // Close oos
                   oos.close();
                   comSockets[i].close();
-
-                  // Update Link State Database
-                  LSA lsa = new LSA();
-                  lsa.linkStateID = rd.simulatedIPAddress;
-                  lsa.lsaSeqNumber = Integer.MIN_VALUE;
-                  LinkDescription ld = new LinkDescription();
-                  ld.linkID = ports[i].router2.simulatedIPAddress;
-                  ld.portNum = -1;
-                  ld.tosMetrics = 0;
-                  lsa.links.add(ld);
-                  lsd.store(lsa);
-
 
                 }
                 catch (Exception e) {
@@ -409,8 +421,8 @@ public class Router {
           flushLinks();
         } else if (command.equals("clear")) {
           clear();
-        }else if (command.equals("lsa")) {
-          lsa();
+        }else if (command.equals("lsd")) {
+          lsd();
         } else if (command.equals("quit")) {
           System.out.println("Quitting...");
           break;
