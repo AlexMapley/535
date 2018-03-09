@@ -26,10 +26,6 @@ public class Router {
 
   Socket[] comSockets = new Socket[4];
   Socket[] clientSockets = new Socket[4];
-  ObjectOutputStream oos = null;
-  ObjectInputStream ois = null;
-  SOSPFPacket inPacket = null;
-
 
   public Router(Configuration config) {
     rd.simulatedIPAddress = config.getString("socs.network.router.ip");
@@ -75,17 +71,23 @@ public class Router {
     public void run() {
 
         try {
+            ObjectOutputStream oos = null;
+            ObjectInputStream ois = null;
+            boolean sequenceConcluded = false;
+            while(!sequenceConcluded) {
 
-                SOSPFPacket iPacket = new SOSPFPacket();
+                sequenceConcluded = true;
+                SOSPFPacket inPacket = null;
 
                 // Blocking wait for client connection //
                 System.out.print("Waiting for another packet...\n>>");
 
-                // Read and process incoming packet
-                inPacket = null;
+
                 ois = new ObjectInputStream(clientSocket.getInputStream());
-                while (inPacket == null) {
+                int attempts = 0;
+                while(attempts < 10) {
                   try {
+                    Thread.sleep(100);
                     inPacket = (SOSPFPacket) ois.readObject();
                   }
                   catch (ClassNotFoundException e) {
@@ -93,6 +95,14 @@ public class Router {
                   }
                   catch (IOException e) {
                   }
+                  catch (InterruptedException e) {
+                  }
+                  attempts++;
+                }
+
+                // Packet Timeout
+                if(attempts == 12) {
+                  break;
                 }
 
 
@@ -142,6 +152,9 @@ public class Router {
                     outPacket.sospfType = 1; // We are sending the second handshake, ie. 1
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
+
+                    // Socket connection thread must stay alive
+                    sequenceConcluded = false;
                   }
                   catch (Exception e) {
                     System.out.println(e);
@@ -162,9 +175,13 @@ public class Router {
                     outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
+
+                    // Socket connection thread must stay alive
+                    sequenceConcluded = false;
                   }
                   catch (Exception e) {
-                    System.out.println(e);
+                    // This is super annoying, don't print
+                    //System.out.println(e);
                   }
                 }
 
@@ -173,14 +190,18 @@ public class Router {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                 }
 
-                // Close Sockets/Streams
+                // Close Streams
                 oos.close();
                 ois.close();
-                comSockets[routerIndex].close();
-                clientSocket.close();
+          }
+          // Close socket
+          clientSocket.close();
+
         } catch (IOException e) {
-            System.err.println(e);
+            // This is super annoying, don't print
+            //System.err.println(e);
         }
+
     }
   }
 
@@ -268,6 +289,10 @@ public class Router {
     Runnable routerPinger = new Runnable() {
           @Override
           public void run() {
+
+            ObjectOutputStream oos = null;
+            ObjectInputStream ois = null;
+
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
