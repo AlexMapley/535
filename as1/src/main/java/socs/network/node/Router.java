@@ -200,20 +200,26 @@ public class Router {
                 // Incoming 2 packet
                 if (inPacket.sospfType == 2) {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
-
-                  // Update Link State Database
-                  LSA lsa = new LSA();
-                  lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
-                  lsa.lsaSeqNumber = Integer.MIN_VALUE;
-                  LinkDescription ld = new LinkDescription();
-                  ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
-                  ld.portNum = inPacket.srcProcessPort;
-                  ld.tosMetrics = 0;
-                  lsa.links.add(ld);
-                  System.out.println("LSA from start:" + "\n" + lsa.toString());
-                  lsd.store(lsa);
+                  try {
+                    // Socket connection thread must stay alive
+                    sequenceConcluded = false;
+                    // Update Link State Database
+                    LSA lsa = new LSA();
+                    lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
+                    lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                    LinkDescription ld = new LinkDescription();
+                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+                    ld.portNum = inPacket.srcProcessPort;
+                    ld.tosMetrics = 0;
+                    lsa.links.add(ld);
+                    System.out.println("LSA from start:" + "\n" + lsa.toString());
+                    lsd.store(lsa);
+                  }
+                  catch (Exception e) {
+                  //  This is super annoying, don't print
+                  //System.out.println(e);
+                  }
                 }
-
                 // Close Streams
                 oos.close();
                 ois.close();
@@ -227,6 +233,10 @@ public class Router {
         }
 
     }
+  }
+  private void printlsd(LinkStateDatabase lsd){
+    System.out.println( ports[0].router1.processPortNumber);
+    System.out.println("LSD from start:" + "\n" + lsd.toString());
   }
 
   /**
@@ -270,6 +280,7 @@ public class Router {
     int openIndex = -1;
     boolean hasDescription = false;
     for (int i = 0; i < 4; i ++) {
+        // test
       if (ports[i] == null) {
         openIndex = i;
         break;
@@ -278,8 +289,6 @@ public class Router {
         hasDescription = true;
       }
     }
-
-
     if (hasDescription == false && openIndex != -1) {
       // Add Link to ports[]
       System.out.println("Establishing new link at ports[" + openIndex + "]");
@@ -287,28 +296,19 @@ public class Router {
       ports[openIndex] = newLink;
     }
   }
-
   private void flushLinks() {
     ports = new Link[4];
   }
-
   private void cmi() {
     System.out.println(">>");
   }
-
   private void lsd() {
     System.out.println(lsd.toString());
   }
-
-
-
   /**
-   * broadcast Tcp handhshake to neighbors
+   * broadcast Tcp handshake to neighbors
    */
   private void processStart() {
-
-
-
     // Attempt to contact other routers
     Runnable routerPinger = new Runnable() {
           @Override
@@ -399,6 +399,8 @@ public class Router {
         if (command.startsWith("detect ")) {
           String[] cmdLine = command.split(" ");
           processDetect(cmdLine[1]);
+        } else if (command.startsWith("print ")) {
+          printlsd(lsd);
         } else if (command.startsWith("disconnect ")) {
           String[] cmdLine = command.split(" ");
           processDisconnect(Short.parseShort(cmdLine[1]));
