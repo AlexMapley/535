@@ -2,11 +2,13 @@ package socs.network.node;
 
 import socs.network.message.*;
 import socs.network.message.LSA;
+import socs.network.message.SOSPFPacket;
 import socs.network.util.Configuration;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.concurrent.*;
 import java.util.*;
+import java.util.Vector;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -230,6 +232,8 @@ public class Router {
                     outPacket.srcIP = rd.simulatedIPAddress;
                     outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                     outPacket.sospfType = 3;
+                    outPacket.linkdb = lsd;
+
                     System.out.println("Before outgoing 3");
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
@@ -244,6 +248,7 @@ public class Router {
                   try {
                     // Socket connection thread must stay alive
                     sequenceConcluded = false;
+                    printlsd(inPacket.linkdb);
 
                     // getting LSA array from packet
 //                    Vector<LSA> receivedLSA = inPacket.lsaArray;
@@ -251,7 +256,6 @@ public class Router {
 //                      System.out.println("Received LSA: " + tlsa);
 //                      lsd.store(tlsa);
 //                    }
-
                   }
                   catch (Exception e){
 
@@ -342,7 +346,7 @@ public class Router {
   private void plsd() {
     System.out.println(lsd.toString());
   }
-    private void plsa() {
+  private void plsa() {
       int counter = 0;
       for(LSA l: lsd._store.values()){
         System.out.println(counter +" : "+ l.toString());
