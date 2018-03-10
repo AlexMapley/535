@@ -41,7 +41,7 @@ public class Router {
 
                   while (true) {
                     clientSockets[clientSocketsIndex] = serverSocket.accept();
-                   
+
                     System.out.println("Accepted new connection!");
                     Thread clientThread = new Thread(new connectionThread(clientSockets[clientSocketsIndex]));
                     clientThread.start();
@@ -217,12 +217,12 @@ public class Router {
                     lsd.store(lsa);
 
                     SOSPFPacket outPacket = new SOSPFPacket();
-                    for(LSA l : lsd._store.values()){
-                        // for each lsa in lsd append to lsa array
-                        System.out.println("LSA added to array: " + l);
-                        outPacket.lsaArray.addElement(l);
-                        System.out.println(" added");
-                    }
+//                    for(LSA l : lsd._store.values()){
+//                        // for each lsa in lsd append to lsa array
+//                        System.out.println("LSA added to array: " + l);
+//                        outPacket.lsaArray.addElement(l);
+//                        System.out.println(" added");
+//                    }
                     System.out.println("out");
                     outPacket.srcProcessIP = inPacket.srcProcessIP;
                     outPacket.srcProcessPort = rd.processPortNumber;
@@ -244,12 +244,13 @@ public class Router {
                   try {
                     // Socket connection thread must stay alive
                     sequenceConcluded = false;
+
                     // getting LSA array from packet
-                    Vector<LSA> receivedLSA = inPacket.lsaArray;
-                    for (LSA tlsa : receivedLSA) {
-                      System.out.println("Received LSA: " + tlsa);
-                      lsd.store(tlsa);
-                    }
+//                    Vector<LSA> receivedLSA = inPacket.lsaArray;
+//                    for (LSA tlsa : receivedLSA) {
+//                      System.out.println("Received LSA: " + tlsa);
+//                      lsd.store(tlsa);
+//                    }
 
                   }
                   catch (Exception e){
