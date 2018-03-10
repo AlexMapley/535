@@ -168,6 +168,24 @@ public class Router {
                 if (inPacket.sospfType == 1) {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                   try {
+                    // this point is where the attached router confirms a two way connection
+                    // Update Link State Database
+                    LSA lsa = new LSA();
+                    // link state id is the simulated IP address of the router that the LSA is originating from
+                    // in this case it would be the first router
+                    lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
+                    lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                    LinkDescription ld = new LinkDescription();
+                    // link ID is the simulated ip address of the router the orginal is connected to
+                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+                    ld.portNum = inPacket.srcProcessPort;
+                    ld.tosMetrics = 999;
+                    lsa.links.add(ld);
+                    System.out.println("LSA from start:" + "\n" + lsa.toString());
+                    lsd.store(lsa);
+                    System.out.println("LSD from start:" + "\n" + lsd.toString());
+
+
                     // Need to send response
                     SOSPFPacket outPacket = new SOSPFPacket();
                     outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
@@ -175,6 +193,14 @@ public class Router {
                     outPacket.dstProcessPort = inPacket.srcProcessPort;
                     outPacket.srcIP = rd.simulatedIPAddress;
                     outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+
+
+                    //
+                    outPacket.linkdb = lsd;
+                    // might be removed later
+                    System.out.println("troubleshooting");
+
+                    //outPacket.lsaArray.add(lsa);
                     outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
@@ -182,19 +208,10 @@ public class Router {
                     // Socket connection thread must stay alive
                     sequenceConcluded = false;
 
-                    // Update Link State Database
-                    LSA lsa = new LSA();
-                    lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
-                    lsa.lsaSeqNumber = Integer.MIN_VALUE;
-                    LinkDescription ld = new LinkDescription();
-                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
-                    ld.portNum = inPacket.srcProcessPort;
-                    ld.tosMetrics = 999;
-                    lsa.links.add(ld);
-                    System.out.println("LSA from start:" + "\n" + lsa.toString());
-                    lsd.store(lsa);
+
                   }
                   catch (Exception e) {
+                    System.out.println(e);
 
                   }
                 }
@@ -207,11 +224,13 @@ public class Router {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                   try{
 
-                    // Update Link State Database
+                    // this is the creation of the R2 --> R1 link
                     LSA lsa = new LSA();
-                    lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
+                    // link state id
+                    lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
                     lsa.lsaSeqNumber = Integer.MIN_VALUE;
                     LinkDescription ld = new LinkDescription();
+                    //l
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                     ld.portNum = inPacket.srcProcessPort;
                     ld.tosMetrics = 0;
@@ -219,8 +238,18 @@ public class Router {
                     System.out.println("LSA 2:" + "\n" + lsa.toString());
                     lsd.store(lsa);
 
+                    //the router has to store the LSA from the inPacket as well
+                    // and then send its own link state packet to all its neighbours
+                    // its confusing because the slides are bad ¯\_(ツ)_/¯
+                    // will be explained in more detail in commit message
+
+                    // gets the linkstate id of the previous router to access that routers LSA
+                    // to store the lsa from the previous router inside this router's LSD
+                    lsd.store(inPacket.linkdb._store.get(inPacket.srcIP));
+
+
                     SOSPFPacket outPacket = new SOSPFPacket();
-                    System.out.println("out");
+                    //System.out.println("out");
                     outPacket.srcProcessIP = inPacket.srcProcessIP;
                     outPacket.srcProcessPort = rd.processPortNumber;
                     outPacket.dstProcessPort = inPacket.srcProcessPort;
@@ -229,10 +258,10 @@ public class Router {
                     outPacket.sospfType = 3;
                     outPacket.linkdb = lsd;
 
-                    System.out.println("Before outgoing 3");
+                    //System.out.println("Before outgoing 3");
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
-                    System.out.println("After outgoing 3");
+                   // System.out.println("After outgoing 3");
                     // Socket connection thread must stay alive
                     sequenceConcluded = false;
 
@@ -242,20 +271,24 @@ public class Router {
                   }
                 }
                 if (inPacket.sospfType == 3) {
+                  // What gets updated here is the links inside the LSA themselves
+                  // and the sequence number is version control
+
                   System.out.println("Received 3");
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                   try {
                     // Socket connection thread must stay alive
                     sequenceConcluded = false;
+
+
+                    lsd.store(inPacket.linkdb._store.get(inPacket.srcIP));
                     printlsd(inPacket.linkdb);
 
+                    System.out.println("LSD in packet 3 :" + lsd.toString());
 
-                    // getting LSA array from packet
-//                    Vector<LSA> receivedLSA = inPacket.lsaArray;
-//                    for (LSA tlsa : receivedLSA) {
-//                      System.out.println("Received LSA: " + tlsa);
-//                      lsd.store(tlsa);
-//                    }
+
+
+
                   }
                   catch (Exception e){
                     System.out.println(e);
@@ -276,8 +309,8 @@ public class Router {
     }
   }
   private void printlsd(LinkStateDatabase lsd){
-    System.out.println( ports[0].router1.processPortNumber+ "\n");
-    System.out.println("LSD from start:" + "\n" + lsd.toString());
+    System.out.println( ports[0].router1.processPortNumber);
+    System.out.println("LSD from print:" + "\n" + lsd.toString());
   }
 
   /**

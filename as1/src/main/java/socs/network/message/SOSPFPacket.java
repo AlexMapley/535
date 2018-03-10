@@ -1,6 +1,7 @@
 package socs.network.message;
 
 import java.io.*;
+import java.util.Enumeration;
 import java.util.Vector;
 import socs.network.node.LinkStateDatabase;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +33,7 @@ public class SOSPFPacket implements Serializable {
 
     //used by LSAUPDATE
     // why are we using vector
-  //public Vector<LSA> lsaArray = null;
+  public Vector<LSA> lsaArray = null;
   //
   // gonna try sending the entire link state db
 
@@ -49,6 +50,15 @@ public class SOSPFPacket implements Serializable {
       System.out.println("Destination ip: " + dstIP);
       if(linkdb != null){
           System.out.println("Link State DB : "+ "\n" + linkdb.toString());
+      }
+      if(lsaArray != null){
+          Enumeration en = lsaArray.elements();
+          System.out.println("lsaArray : "+ "\n");
+          while(en.hasMoreElements()){
+              System.out.println(en.nextElement() + "\n");
+          }
+
+
       }
 
       System.out.println("______________________________\n");
