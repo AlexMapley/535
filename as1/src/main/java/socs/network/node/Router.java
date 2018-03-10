@@ -218,8 +218,6 @@ public class Router {
 
                 if (inPacket.sospfType == 3) {
                   try {
-
-
                     // this is the creation of the R2 --> R1 link
                     // retrieve lsa from hashmap and update
                     LSA lsa = lsd._store.get(rd.simulatedIPAddress);
@@ -231,9 +229,10 @@ public class Router {
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                     ld.portNum = inPacket.srcProcessPort;
                     ld.tosMetrics = 999;
-                    ld.tosMetrics = 0;
+                    //ld.tosMetrics = 0;
                     lsa.links.add(ld);
                     System.out.println("LSA from packet 3:" + "\n" + lsa.toString());
+
                     lsd.store(lsa);
 
                     //the router has to store the LSA from the inPacket as well
@@ -242,26 +241,38 @@ public class Router {
                     // will be explained in more detail in commit message
                     // gets the linkstate id of the previous router to access that routers LSA
                     // to store the lsa from the previous router inside this router's LSD
+
+                    // gonna check to see if the lsa with linkstate id of the router sending the packet is the most up to date
+                    //
+                    //
+                    LSA prevLsa = inPacket.lsd._store.get(inPacket.srcIP);
+                    // gets the lsa of the router sending the packet inside the current router if it exists
+                    LSA nowLsa = lsd._store.get(inPacket.srcIP);
+                    if(nowLsa !=  null){
+                      System.out.println("LSA in current router with IP (" + inPacket.srcIP + ") :  NOT NULL" );
+                    }
+                    // stores the most current version
+                    lsd.store(lsd.updateLSA(prevLsa,nowLsa));
+
                     lsd.store(inPacket.lsd._store.get(inPacket.srcIP));
 
-
-                    SOSPFPacket outPacket = new SOSPFPacket();
+                    //SOSPFPacket outPacket = new SOSPFPacket();
                     //System.out.println("out");
-                    outPacket.srcProcessIP = inPacket.srcProcessIP;
-                    outPacket.srcProcessPort = rd.processPortNumber;
-                    outPacket.dstProcessPort = inPacket.srcProcessPort;
-                    outPacket.srcIP = rd.simulatedIPAddress;
-                    outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                    outPacket.sospfType = 3;
-                    outPacket.lsd = lsd;
+                    //outPacket.srcProcessIP = inPacket.srcProcessIP;
+                    //outPacket.srcProcessPort = rd.processPortNumber;
+                    //outPacket.dstProcessPort = inPacket.srcProcessPort;
+                    //outPacket.srcIP = rd.simulatedIPAddress;
+                    //outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                    //outPacket.sospfType = 3;
+                    //outPacket.lsd = lsd;
 
                    //System.out.println("Before outgoing 3");
-                    outPacket.printPacket("Outgoing");
-                    oos.writeObject(outPacket);
+                    //outPacket.printPacket("Outgoing");
+                    //oos.writeObject(outPacket);
                    // System.out.println("After outgoing 3");
 
                     // Socket connection thread must stay alive
-                    sequenceConcluded = false;
+                    //sequenceConcluded = false;
                   }
                   catch (Exception e) {
                     System.out.println(e);
@@ -382,6 +393,8 @@ public class Router {
                   outPacket.srcIP = rd.simulatedIPAddress;
                   outPacket.dstIP = ports[i].router2.processIPAddress;
                   outPacket.sospfType = 0; // We are sending the first handshake, ie. HELLO
+                  // added weight needs to be fixed
+                  outPacket.weight = 0;
                   outPacket.printPacket("Outgoing");
                   oos.writeObject(outPacket);
 
@@ -425,8 +438,10 @@ public class Router {
                   oos = new ObjectOutputStream(comSockets[i].getOutputStream());
 
 
+
+
                   // Contact Router - Handshake part 1
-                  ports[i].router2.status = RouterStatus.INIT;
+                  //ports[i].router2.status = RouterStatus.INIT;
                   SOSPFPacket outPacket = new SOSPFPacket();
                   outPacket.srcProcessIP = "127.0.0.1";
                   outPacket.srcProcessPort = rd.processPortNumber;
