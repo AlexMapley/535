@@ -1,11 +1,12 @@
 package socs.network.node;
 
+import java.io.*;
 import socs.network.message.LSA;
 import socs.network.message.LinkDescription;
 
 import java.util.HashMap;
 
-public class LinkStateDatabase {
+public class LinkStateDatabase implements Serializable{
 
   //linkID => LSAInstance
   HashMap<String, LSA> _store = new HashMap<String, LSA>();
@@ -27,7 +28,8 @@ public class LinkStateDatabase {
    */
   String getShortestPath(String destinationIP) {
     //TODO: fill the implementation here
-    return null;
+
+    return destinationIP;
   }
 
   //initialize the linkstate database by adding an entry about the router itself
@@ -55,6 +57,19 @@ public class LinkStateDatabase {
       sb.append("\n");
     }
     return sb.toString();
+  }
+
+  public LSA updateLSA(String oldLinkID ,String newlinkID){
+    // creating a new LSA
+    LSA newLSA = new LSA();
+    newLSA.linkStateID = newlinkID;
+
+    // getting the seq number of old LSA
+    LSA oldLSA = _store.get(oldLinkID);
+    int old_seq = oldLSA.lsaSeqNumber;
+
+    newLSA.lsaSeqNumber = old_seq + 1;
+    return newLSA;
   }
 
 }
