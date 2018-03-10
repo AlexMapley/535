@@ -170,15 +170,16 @@ public class Router {
                   try {
                     // this point is where the attached router confirms a two way connection
                     // Update Link State Database
-                    LSA lsa = new LSA();
+                    LSA lsa = lsd._store.get(rd.simulatedIPAddress);
                     // link state id is the simulated IP address of the router that the LSA is originating from
                     // in this case it would be the first router
-                    lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
-                    lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                    //lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
+                    lsa.lsaSeqNumber += 1 ;
                     LinkDescription ld = new LinkDescription();
-                    // link ID is the simulated ip address of the router the orginal is connected to
+                    // link ID is the simulated ip address of the router the original is connected to
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                     ld.portNum = inPacket.srcProcessPort;
+                    // weight of edge to other router?
                     ld.tosMetrics = 999;
                     lsa.links.add(ld);
                     System.out.println("LSA from start:" + "\n" + lsa.toString());
@@ -198,7 +199,7 @@ public class Router {
                     //
                     outPacket.linkdb = lsd;
                     // might be removed later
-                    System.out.println("troubleshooting");
+                    //System.out.println("troubleshooting");
 
                     //outPacket.lsaArray.add(lsa);
                     outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
@@ -225,10 +226,11 @@ public class Router {
                   try{
 
                     // this is the creation of the R2 --> R1 link
-                    LSA lsa = new LSA();
+                    // retrieve lsa from hashmap and update
+                    LSA lsa = lsd._store.get(rd.simulatedIPAddress);
                     // link state id
-                    lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
-                    lsa.lsaSeqNumber = Integer.MIN_VALUE;
+
+                    lsa.lsaSeqNumber += 1;
                     LinkDescription ld = new LinkDescription();
                     //l
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
@@ -377,12 +379,12 @@ public class Router {
     System.out.println(">>");
   }
   private void plsd() {
-    System.out.println(lsd.toString());
+    System.out.println(lsd.toString() );
   }
   private void plsa() {
       int counter = 0;
       for(LSA l: lsd._store.values()){
-        System.out.println(counter +" : "+ l.toString());
+        System.out.println(counter +" : "+ l.toString() + " \n" );
         counter += 1;
 
       }
@@ -396,6 +398,8 @@ public class Router {
     Runnable routerPinger = new Runnable() {
           @Override
           public void run() {
+            // to see if init runs properly for link state database
+            System.out.println("Testing: " + lsd.toString());
 
             ObjectOutputStream oos = null;
             ObjectInputStream ois = null;
@@ -438,7 +442,7 @@ public class Router {
 
   /**
    * attach the link to the remote router, which is identified by the given simulated ip;
-   * to establish the connection via socket, you need to indentify the process IP and process Port;
+   * to establish the connection via socket, you need to identify the process IP and process Port;
    * additionally, weight is the cost to transmitting data through the link
    * <p/>
    * This command does trigger the link database synchronization
