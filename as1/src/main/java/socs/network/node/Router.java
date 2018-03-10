@@ -41,9 +41,7 @@ public class Router {
 
                   while (true) {
                     clientSockets[clientSocketsIndex] = serverSocket.accept();
-                    // getting error where it stops sending packets after sosp header 2 due to accepting new connection
-                    System.out.println("Client socket index: " + clientSocketsIndex);
-                    //
+                   
                     System.out.println("Accepted new connection!");
                     Thread clientThread = new Thread(new connectionThread(clientSockets[clientSocketsIndex]));
                     clientThread.start();
@@ -222,7 +220,8 @@ public class Router {
                     for(LSA l : lsd._store.values()){
                         // for each lsa in lsd append to lsa array
                         System.out.println("LSA added to array: " + l);
-                        outPacket.lsaArray.add(l);
+                        outPacket.lsaArray.addElement(l);
+                        System.out.println(" added");
                     }
                     System.out.println("out");
                     outPacket.srcProcessIP = inPacket.srcProcessIP;
