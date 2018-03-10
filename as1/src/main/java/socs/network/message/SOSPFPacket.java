@@ -29,7 +29,7 @@ public class SOSPFPacket implements Serializable {
   //e.g. when router A sends HELLO to its neighbor, it has to fill this field with its own
   //simulated IP address
   public String neighborID; //neighbor's simulated IP address
-  public LinkStateDatabase linkdb;
+  public LinkStateDatabase lsd;
 
     //used by LSAUPDATE
     // why are we using vector
@@ -48,18 +48,18 @@ public class SOSPFPacket implements Serializable {
       System.out.println("Source ip: " + srcIP);
       System.out.println("Destination port: " + dstProcessPort);
       System.out.println("Destination ip: " + dstIP);
-      if(linkdb != null){
-          System.out.println("Link State DB : "+ "\n" + linkdb.toString());
-      }
-      if(lsaArray != null){
-          Enumeration en = lsaArray.elements();
-          System.out.println("lsaArray : "+ "\n");
-          while(en.hasMoreElements()){
-              System.out.println(en.nextElement() + "\n");
-          }
-
-
-      }
+      // if(lsd != null){
+      //     System.out.println("Link State DB : "+ "\n" + lsd.toString());
+      // }
+      // if(lsaArray != null){
+      //     Enumeration en = lsaArray.elements();
+      //     System.out.println("lsaArray : "+ "\n");
+      //     while(en.hasMoreElements()){
+      //         System.out.println(en.nextElement() + "\n");
+      //     }
+      //
+      //
+      // }
 
       System.out.println("______________________________\n");
   }
