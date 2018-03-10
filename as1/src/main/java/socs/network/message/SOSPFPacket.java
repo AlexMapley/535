@@ -35,10 +35,13 @@ public class SOSPFPacket implements Serializable {
     System.out.println("\n______________________________");
     System.out.println(flag + " Packet Description:");
     System.out.println("Header: " + sospfType);
-    System.out.println("Src port: " + srcProcessPort);
-    System.out.println("Src ip: " + srcIP);
-    System.out.println("Dst port: " + dstProcessPort);
-    System.out.println("Dst ip: " + dstIP);
+    System.out.println("Source port: " + srcProcessPort);
+    System.out.println("Source ip: " + srcIP);
+    System.out.println("Destination port: " + dstProcessPort);
+    System.out.println("Destination ip: " + dstIP);
+    if(lsaArray != null){
+      System.out.println("LSA Array: " + lsaArray);
+    }
     System.out.println("______________________________\n");
   }
 

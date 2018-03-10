@@ -1,7 +1,7 @@
 package socs.network.node;
 
 import socs.network.message.*;
-
+import socs.network.message.LSA;
 import socs.network.util.Configuration;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -41,6 +41,9 @@ public class Router {
 
                   while (true) {
                     clientSockets[clientSocketsIndex] = serverSocket.accept();
+                    // getting error where it stops sending packets after sosp header 2 due to accepting new connection
+                    System.out.println("Client socket index: " + clientSocketsIndex);
+                    //
                     System.out.println("Accepted new connection!");
                     Thread clientThread = new Thread(new connectionThread(clientSockets[clientSocketsIndex]));
                     clientThread.start();
@@ -197,10 +200,10 @@ public class Router {
                   }
                 }
 
-                // Incoming 2 packet
+                // Incoming 2 packet --> outgoing 3 packet
                 if (inPacket.sospfType == 2) {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
-                  try {
+                  try{
                     // Socket connection thread must stay alive
                     sequenceConcluded = false;
                     // Update Link State Database
@@ -212,12 +215,46 @@ public class Router {
                     ld.portNum = inPacket.srcProcessPort;
                     ld.tosMetrics = 0;
                     lsa.links.add(ld);
-                    System.out.println("LSA from start:" + "\n" + lsa.toString());
+                    System.out.println("LSA 2:" + "\n" + lsa.toString());
                     lsd.store(lsa);
+
+                    SOSPFPacket outPacket = new SOSPFPacket();
+                    for(LSA l : lsd._store.values()){
+                        // for each lsa in lsd append to lsa array
+                        System.out.println("LSA added to array: " + l);
+                        outPacket.lsaArray.add(l);
+                    }
+                    System.out.println("out");
+                    outPacket.srcProcessIP = inPacket.srcProcessIP;
+                    outPacket.srcProcessPort = rd.processPortNumber;
+                    outPacket.dstProcessPort = inPacket.srcProcessPort;
+                    outPacket.srcIP = rd.simulatedIPAddress;
+                    outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                    outPacket.sospfType = 3;
+                    System.out.println("Before outgoing 3");
+                    outPacket.printPacket("Outgoing");
+                    oos.writeObject(outPacket);
+                    System.out.println("After outgoing 3");
                   }
                   catch (Exception e) {
-                  //  This is super annoying, don't print
-                  //System.out.println(e);
+                  }
+                }
+                if (inPacket.sospfType == 3) {
+                  System.out.println("Received 3");
+                  ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
+                  try {
+                    // Socket connection thread must stay alive
+                    sequenceConcluded = false;
+                    // getting LSA array from packet
+                    Vector<LSA> receivedLSA = inPacket.lsaArray;
+                    for (LSA tlsa : receivedLSA) {
+                      System.out.println("Received LSA: " + tlsa);
+                      lsd.store(tlsa);
+                    }
+
+                  }
+                  catch (Exception e){
+
                   }
                 }
                 // Close Streams
