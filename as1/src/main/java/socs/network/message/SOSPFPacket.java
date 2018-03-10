@@ -32,7 +32,7 @@ public class SOSPFPacket implements Serializable {
 
     //used by LSAUPDATE
     // why are we using vector
-  public Vector<LSA> lsaArray = null;
+  //public Vector<LSA> lsaArray = null;
   //
   // gonna try sending the entire link state db
 
@@ -48,7 +48,7 @@ public class SOSPFPacket implements Serializable {
       System.out.println("Destination port: " + dstProcessPort);
       System.out.println("Destination ip: " + dstIP);
       if(linkdb != null){
-          System.out.println("Link State DB : " + linkdb.toString());
+          System.out.println("Link State DB : "+ "\n" + linkdb.toString());
       }
 
       System.out.println("______________________________\n");

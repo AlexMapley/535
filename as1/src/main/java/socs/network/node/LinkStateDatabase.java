@@ -1,11 +1,12 @@
 package socs.network.node;
 
+import java.io.*;
 import socs.network.message.LSA;
 import socs.network.message.LinkDescription;
 
 import java.util.HashMap;
 
-public class LinkStateDatabase {
+public class LinkStateDatabase implements Serializable{
 
   //linkID => LSAInstance
   HashMap<String, LSA> _store = new HashMap<String, LSA>();

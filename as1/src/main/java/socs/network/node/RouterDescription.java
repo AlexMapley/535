@@ -1,6 +1,6 @@
 package socs.network.node;
-
-public class RouterDescription {
+import java.io.*;
+public class RouterDescription implements Serializable{
   //used to socket communication
   String processIPAddress;
   short processPortNumber;

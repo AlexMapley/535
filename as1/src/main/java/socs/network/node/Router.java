@@ -195,17 +195,18 @@ public class Router {
                     lsd.store(lsa);
                   }
                   catch (Exception e) {
-                    // This is super annoying, don't print
-                    //System.out.println(e);
+
                   }
                 }
 
                 // Incoming 2 packet --> outgoing 3 packet
                 if (inPacket.sospfType == 2) {
+                  //
+                  System.out.println("router index: " + routerIndex);
+                  //
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
                   try{
-                    // Socket connection thread must stay alive
-                    sequenceConcluded = false;
+
                     // Update Link State Database
                     LSA lsa = new LSA();
                     lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
@@ -219,12 +220,6 @@ public class Router {
                     lsd.store(lsa);
 
                     SOSPFPacket outPacket = new SOSPFPacket();
-//                    for(LSA l : lsd._store.values()){
-//                        // for each lsa in lsd append to lsa array
-//                        System.out.println("LSA added to array: " + l);
-//                        outPacket.lsaArray.addElement(l);
-//                        System.out.println(" added");
-//                    }
                     System.out.println("out");
                     outPacket.srcProcessIP = inPacket.srcProcessIP;
                     outPacket.srcProcessPort = rd.processPortNumber;
@@ -238,8 +233,12 @@ public class Router {
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
                     System.out.println("After outgoing 3");
+                    // Socket connection thread must stay alive
+                    sequenceConcluded = false;
+
                   }
                   catch (Exception e) {
+                    System.out.println(e);
                   }
                 }
                 if (inPacket.sospfType == 3) {
@@ -250,6 +249,7 @@ public class Router {
                     sequenceConcluded = false;
                     printlsd(inPacket.linkdb);
 
+
                     // getting LSA array from packet
 //                    Vector<LSA> receivedLSA = inPacket.lsaArray;
 //                    for (LSA tlsa : receivedLSA) {
@@ -258,7 +258,7 @@ public class Router {
 //                    }
                   }
                   catch (Exception e){
-
+                    System.out.println(e);
                   }
                 }
                 // Close Streams
@@ -276,7 +276,7 @@ public class Router {
     }
   }
   private void printlsd(LinkStateDatabase lsd){
-    System.out.println( ports[0].router1.processPortNumber);
+    System.out.println( ports[0].router1.processPortNumber+ "\n");
     System.out.println("LSD from start:" + "\n" + lsd.toString());
   }
 
