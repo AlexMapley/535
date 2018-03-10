@@ -339,9 +339,18 @@ public class Router {
   private void cmi() {
     System.out.println(">>");
   }
-  private void lsd() {
+  private void plsd() {
     System.out.println(lsd.toString());
   }
+    private void plsa() {
+      int counter = 0;
+      for(LSA l: lsd._store.values()){
+        System.out.println(counter +" : "+ l.toString());
+        counter += 1;
+
+      }
+    }
+
   /**
    * broadcast Tcp handshake to neighbors
    */
@@ -437,7 +446,8 @@ public class Router {
           String[] cmdLine = command.split(" ");
           processDetect(cmdLine[1]);
         } else if (command.startsWith("print ")) {
-          printlsd(lsd);
+          plsd();
+          plsa();
         } else if (command.startsWith("disconnect ")) {
           String[] cmdLine = command.split(" ");
           processDisconnect(Short.parseShort(cmdLine[1]));
@@ -461,7 +471,7 @@ public class Router {
         } else if (command.equals("clear")) {
           clear();
         }else if (command.equals("lsd")) {
-          lsd();
+          plsd();
         } else if (command.equals("quit")) {
           System.out.println("Quitting...");
           break;
