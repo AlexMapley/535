@@ -30,6 +30,7 @@ public class SOSPFPacket implements Serializable {
   //simulated IP address
   public String neighborID; //neighbor's simulated IP address
   public LinkStateDatabase lsd;
+  public int weight;
 
     //used by LSAUPDATE
     // why are we using vector

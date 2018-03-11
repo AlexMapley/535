@@ -59,17 +59,16 @@ public class LinkStateDatabase implements Serializable{
     return sb.toString();
   }
 
-  public LSA updateLSA(String oldLinkID ,String newlinkID){
-    // creating a new LSA
-    LSA newLSA = new LSA();
-    newLSA.linkStateID = newlinkID;
-
-    // getting the seq number of old LSA
-    LSA oldLSA = _store.get(oldLinkID);
-    int old_seq = oldLSA.lsaSeqNumber;
-
-    newLSA.lsaSeqNumber = old_seq + 1;
-    return newLSA;
+  public LSA updateLSA(LSA oldLsa ,LSA newLsa){
+    // checks which LSA has the most up to date sequence number
+    int oldSeq = oldLsa.lsaSeqNumber;
+    int newSeq = newLsa.lsaSeqNumber;
+    if(oldSeq < newSeq) {
+      return newLsa;
+    }
+    else{
+      return oldLsa;
+    }
   }
 
 }
