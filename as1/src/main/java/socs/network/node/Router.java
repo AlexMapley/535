@@ -19,6 +19,8 @@ public class Router {
 
   // Assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
+  // weights associated with ports
+  short[] w = new short[4];
 
   // Init Link State Database
   LinkStateDatabase lsd = new LinkStateDatabase(rd);
@@ -175,6 +177,7 @@ public class Router {
                     outPacket.srcIP = rd.simulatedIPAddress;
                     outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                     outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
+                    outPacket.weight = (int) w[routerIndex];
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
 
@@ -189,7 +192,7 @@ public class Router {
                     LinkDescription ld = new LinkDescription();
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                     ld.portNum = inPacket.srcProcessPort;
-                    ld.tosMetrics = 999;
+                    ld.tosMetrics = (int) w[routerIndex];
                     lsa.links.add(ld);
                     System.out.println("LSA from start:" + "\n" + lsa.toString());
                     lsd.store(lsa);
@@ -211,7 +214,7 @@ public class Router {
                   LinkDescription ld = new LinkDescription();
                   ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                   ld.portNum = inPacket.srcProcessPort;
-                  ld.tosMetrics = 0;
+                  ld.tosMetrics = inPacket.weight;
                   lsa.links.add(ld);
                   System.out.println("LSA from start:" + "\n" + lsa.toString());
                   lsd.store(lsa);
@@ -221,15 +224,11 @@ public class Router {
                   try {
                     //the router has to store the LSA from the inPacket as well
                     // and then send its own link state packet to all its neighbours
-                    // its confusing because the slides are bad ¯\_(ツ)_/¯
-                    // will be explained in more detail in commit message
+
                     // gets the linkstate id of the previous router to access that routers LSA
                     // to store the lsa from the previous router inside this router's LSD
                     // gonna check to see if the lsa with linkstate id of the router sending the packet is the most up to date
-                    //
-                    //
                     LSA lsa;
-
                     LSA nowLsa = inPacket.lsd._store.get(inPacket.srcIP);
                     // gets the lsa of the router sending the packet inside the current router if it exists
                     LSA prevLsa = lsd._store.get(inPacket.srcIP);
@@ -327,6 +326,7 @@ public class Router {
       // Add Link to ports[]
       System.out.println("Establishing new link at ports[" + openIndex + "]");
       Link newLink = new Link(rd, otherRouter);
+      w[openIndex] = weight;
       ports[openIndex] = newLink;
     }
   }
