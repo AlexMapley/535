@@ -182,8 +182,8 @@ public class Router {
                     sequenceConcluded = false;
 
                     // Update Link State Database
-                    LSA lsa = new LSA();
-                    lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
+                    LSA lsa = lsd._store.get(rd.simulatedIPAddress);
+                    lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
                     lsa.lsaSeqNumber = Integer.MIN_VALUE;
                     LinkDescription ld = new LinkDescription();
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
@@ -204,8 +204,8 @@ public class Router {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
 
                   // Update Link State Database
-                  LSA lsa = new LSA();
-                  lsa.linkStateID = ports[routerIndex].router2.simulatedIPAddress;
+                  LSA lsa = lsd._store.get(rd.simulatedIPAddress);
+                  lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
                   lsa.lsaSeqNumber = Integer.MIN_VALUE;
                   LinkDescription ld = new LinkDescription();
                   ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
@@ -220,20 +220,20 @@ public class Router {
                   try {
                     // this is the creation of the R2 --> R1 link
                     // retrieve lsa from hashmap and update
-                    LSA lsa = lsd._store.get(rd.simulatedIPAddress);
+                    //LSA lsa = lsd._store.get(rd.simulatedIPAddress);
                     // link state id
 
-                    lsa.lsaSeqNumber += 1;
-                    LinkDescription ld = new LinkDescription();
+                    //lsa.lsaSeqNumber += 1;
+                    //LinkDescription ld = new LinkDescription();
                     //l
-                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
-                    ld.portNum = inPacket.srcProcessPort;
-                    ld.tosMetrics = 999;
+                    //ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+                    //ld.portNum = inPacket.srcProcessPort;
+                    //ld.tosMetrics = 999;
                     //ld.tosMetrics = 0;
-                    lsa.links.add(ld);
-                    System.out.println("LSA from packet 3:" + "\n" + lsa.toString());
+                    //lsa.links.add(ld);
+                    //System.out.println("LSA from packet 3:" + "\n" + lsa.toString());
 
-                    lsd.store(lsa);
+                    //lsd.store(lsa);
 
                     //the router has to store the LSA from the inPacket as well
                     // and then send its own link state packet to all its neighbours
@@ -245,16 +245,24 @@ public class Router {
                     // gonna check to see if the lsa with linkstate id of the router sending the packet is the most up to date
                     //
                     //
+                    LSA lsa;
+
                     LSA prevLsa = inPacket.lsd._store.get(inPacket.srcIP);
                     // gets the lsa of the router sending the packet inside the current router if it exists
                     LSA nowLsa = lsd._store.get(inPacket.srcIP);
                     if(nowLsa !=  null){
                       System.out.println("LSA in current router with IP (" + inPacket.srcIP + ") :  NOT NULL" );
+                      lsa = lsd.updateLSA(prevLsa,nowLsa);
+                    }
+                    else{
+                      lsa = prevLsa;
                     }
                     // stores the most current version
-                    lsd.store(lsd.updateLSA(prevLsa,nowLsa));
 
-                    lsd.store(inPacket.lsd._store.get(inPacket.srcIP));
+                    lsa.lsaSeqNumber += 1;
+                    lsd.store(lsa);
+
+                    //lsd.store(inPacket.lsd._store.get(inPacket.srcIP));
 
                     //SOSPFPacket outPacket = new SOSPFPacket();
                     //System.out.println("out");
