@@ -218,69 +218,35 @@ public class Router {
 
                 if (inPacket.sospfType == 3) {
                   try {
-                    // this is the creation of the R2 --> R1 link
-                    // retrieve lsa from hashmap and update
-                    //LSA lsa = lsd._store.get(rd.simulatedIPAddress);
-                    // link state id
-
-                    //lsa.lsaSeqNumber += 1;
-                    //LinkDescription ld = new LinkDescription();
-                    //l
-                    //ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
-                    //ld.portNum = inPacket.srcProcessPort;
-                    //ld.tosMetrics = 999;
-                    //ld.tosMetrics = 0;
-                    //lsa.links.add(ld);
-                    //System.out.println("LSA from packet 3:" + "\n" + lsa.toString());
-
-                    //lsd.store(lsa);
-
                     //the router has to store the LSA from the inPacket as well
                     // and then send its own link state packet to all its neighbours
                     // its confusing because the slides are bad ¯\_(ツ)_/¯
                     // will be explained in more detail in commit message
                     // gets the linkstate id of the previous router to access that routers LSA
                     // to store the lsa from the previous router inside this router's LSD
-
                     // gonna check to see if the lsa with linkstate id of the router sending the packet is the most up to date
                     //
                     //
                     LSA lsa;
 
-                    LSA prevLsa = inPacket.lsd._store.get(inPacket.srcIP);
+                    LSA nowLsa = inPacket.lsd._store.get(inPacket.srcIP);
                     // gets the lsa of the router sending the packet inside the current router if it exists
-                    LSA nowLsa = lsd._store.get(inPacket.srcIP);
-                    if(nowLsa !=  null){
-                      System.out.println("LSA in current router with IP (" + inPacket.srcIP + ") :  NOT NULL" );
+                    LSA prevLsa = lsd._store.get(inPacket.srcIP);
+                    if(prevLsa !=  null){
+                      System.out.println("LSA in current router with IP (" + inPacket.srcIP + ")'s seq num : " + prevLsa.lsaSeqNumber);
+                      System.out.println("LSA in packet with IP (" + inPacket.srcIP + ")'s seq num : " + nowLsa.lsaSeqNumber);
                       lsa = lsd.updateLSA(prevLsa,nowLsa);
                     }
                     else{
-                      lsa = prevLsa;
+                      lsa = nowLsa;
                     }
                     // stores the most current version
 
-                    lsa.lsaSeqNumber += 1;
+                    //lsa.lsaSeqNumber += 1;
                     lsd.store(lsa);
+                    // print state to see what sequence number the lsa is at
+                    System.out.println("new LSA in current router with IP (" + inPacket.srcIP + ")'s seq num :" + lsa.lsaSeqNumber);
 
-                    //lsd.store(inPacket.lsd._store.get(inPacket.srcIP));
-
-                    //SOSPFPacket outPacket = new SOSPFPacket();
-                    //System.out.println("out");
-                    //outPacket.srcProcessIP = inPacket.srcProcessIP;
-                    //outPacket.srcProcessPort = rd.processPortNumber;
-                    //outPacket.dstProcessPort = inPacket.srcProcessPort;
-                    //outPacket.srcIP = rd.simulatedIPAddress;
-                    //outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                    //outPacket.sospfType = 3;
-                    //outPacket.lsd = lsd;
-
-                   //System.out.println("Before outgoing 3");
-                    //outPacket.printPacket("Outgoing");
-                    //oos.writeObject(outPacket);
-                   // System.out.println("After outgoing 3");
-
-                    // Socket connection thread must stay alive
-                    //sequenceConcluded = false;
                   }
                   catch (Exception e) {
                     System.out.println(e);
@@ -385,13 +351,12 @@ public class Router {
             ObjectInputStream ois = null;
 
             for (int i = 0; i < 4; i++) {
-              if (ports[i] != null) {
+              if ((ports[i] != null) && (ports[i].router2.status == RouterStatus.INIT)) {
+                // to make sure that we do not resend to already created ports
                 try {
 
                   comSockets[i] = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
                   oos = new ObjectOutputStream(comSockets[i].getOutputStream());
-
-
                   // Contact Router - Handshake part 1
                   ports[i].router2.status = RouterStatus.INIT;
                   SOSPFPacket outPacket = new SOSPFPacket();
@@ -432,24 +397,13 @@ public class Router {
     Runnable lsdShare = new Runnable() {
           @Override
           public void run() {
-
-          //  System.out.println("Testing: " + lsd.toString());
-
             ObjectOutputStream oos = null;
             ObjectInputStream ois = null;
-
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
-
                   comSockets[i] = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
                   oos = new ObjectOutputStream(comSockets[i].getOutputStream());
-
-
-
-
-                  // Contact Router - Handshake part 1
-                  //ports[i].router2.status = RouterStatus.INIT;
                   SOSPFPacket outPacket = new SOSPFPacket();
                   outPacket.srcProcessIP = "127.0.0.1";
                   outPacket.srcProcessPort = rd.processPortNumber;
@@ -460,11 +414,9 @@ public class Router {
                   outPacket.lsd = lsd;
                   outPacket.printPacket("Outgoing");
                   oos.writeObject(outPacket);
-
                   // Close oos
                   oos.close();
                   comSockets[i].close();
-
                 }
                 catch (Exception e) {
                     System.out.println("Unable to write to socket");
