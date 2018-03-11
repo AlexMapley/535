@@ -184,7 +184,8 @@ public class Router {
                     // Update Link State Database
                     LSA lsa = lsd._store.get(rd.simulatedIPAddress);
                     lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
-                    lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                    // leads to number errors in seq
+                    lsa.lsaSeqNumber += 1;
                     LinkDescription ld = new LinkDescription();
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                     ld.portNum = inPacket.srcProcessPort;
@@ -399,6 +400,10 @@ public class Router {
           public void run() {
             ObjectOutputStream oos = null;
             ObjectInputStream ois = null;
+            // gotta update lsa sequence number when sharing
+            LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
+            editedLsa.lsaSeqNumber += 1;
+            lsd.store(editedLsa);
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
