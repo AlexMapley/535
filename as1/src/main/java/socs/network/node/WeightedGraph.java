@@ -149,35 +149,6 @@ public class WeightedGraph {
 
 
 
-
-      // // Main loop
-      // while(!unsettled.isEmpty()) {
-      //   String lowestDistanceVertex = "";
-      //   int lowestDistance = 100000000;
-      //   for(String node : unsettledNodes) {
-      //     int indexOfWeight = dNodes.indexOf(node);
-      //     if (distances.get(index) < lowestDistance) {
-      //       lowestDistance = distances.get(index);
-      //       lowestDistanceVertex = dNodes.get(index);
-      //     }
-      //   }
-      //   unsettled.remove(lowestDistanceVertex);
-      //   for (Edge e : listOfEdgesSorted()) {
-      //     if (e.nodes[0].equals(lowestDistanceVertex)) {
-      //
-      //     }
-      //   }
-
-
-        }
-      }
-
-
-
-
-
-
-
       // Is there an immediate path?
       for (Edge e : listOfEdgesSorted()) {
         if (e.nodes[0].equals(source) && e.nodes[1].equals(destination)) {
