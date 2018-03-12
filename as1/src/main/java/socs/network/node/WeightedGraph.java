@@ -84,6 +84,10 @@ public class WeightedGraph {
         return this.edges;
     }
 
+    public ArrayList<String> getNodes() {
+      return this.nodes;
+    }
+
     public int getNbNodes(){
         return this.nb_nodes;
     }
@@ -113,11 +117,12 @@ public class WeightedGraph {
 
     public void djikstras(String source, String destination) {
 
-      // //ArrayList<String> visitedNodes = new ArrayList<String>();
-      // //ArrayList<String> pathNodes = new ArrayList<String>();
-      // ArrayList<ArrayList<Edge>> paths = new ArrayList<ArrayList<Edge>> ();
-      // ArrayList<Edge> optimalPath = new ArrayList<Edge>();
-      // ArrayList<Integer> pathWeights = new ArrayList<Integer>();
+      int index;
+      ArrayList<String> dNodes = getNodes();
+      ArrayList<Integer> distances = new ArrayList<Integer>();
+      ArrayList<Edge> optimalPath = new ArrayList<Edge>();
+      // ArrayList<String> unsettled = new ArrayList<String>();
+      // ArrayList<String> settled = new ArrayList<String>();
 
       // Populate dummy graph with edges
       WeightedGraph graphClone = new WeightedGraph();
@@ -126,12 +131,44 @@ public class WeightedGraph {
           graphClone.addEdge(e);
       }
 
-      // Set of settled and unsettled vertices
-      ArrayList<Integer> unsettled = new ArrayList<Integer>();
-      ArrayList<Integer> settled = new ArrayList<Integer>();
-      for (Edge e : listOfEdgesSorted()) {
-        if (!(unsettled.contains(e.nodes[0]))) {
-          unsettled.add(e.nodes[0]);
+      // Set node distance all to -1
+      for (String node : dNodes) {
+        index = dNodes.indexOf(node);
+        distances.add(index,100000000);
+      }
+
+      // Set distance to original vertex as 0
+      index = dNodes.indexOf(source);
+      distances.set(index,0);
+
+
+
+      Set<String> settledNodes = new HashSet();
+      Set<String> unsettledNodes = new HashSet();
+      unsettledNodes.add(source);
+
+
+
+
+      // // Main loop
+      // while(!unsettled.isEmpty()) {
+      //   String lowestDistanceVertex = "";
+      //   int lowestDistance = 100000000;
+      //   for(String node : unsettledNodes) {
+      //     int indexOfWeight = dNodes.indexOf(node);
+      //     if (distances.get(index) < lowestDistance) {
+      //       lowestDistance = distances.get(index);
+      //       lowestDistanceVertex = dNodes.get(index);
+      //     }
+      //   }
+      //   unsettled.remove(lowestDistanceVertex);
+      //   for (Edge e : listOfEdgesSorted()) {
+      //     if (e.nodes[0].equals(lowestDistanceVertex)) {
+      //
+      //     }
+      //   }
+
+
         }
       }
 
@@ -141,25 +178,15 @@ public class WeightedGraph {
 
 
 
-
-      System.out.println(graphClone.toString());
-
-      // Set node distances to -1
-      int[] distances = new int[nb_nodes];
-      for (int i = 0; i < nb_nodes; i++) {
-        distances[i] = -1;
-      }
-
-      // First Iteration
+      // Is there an immediate path?
       for (Edge e : listOfEdgesSorted()) {
         if (e.nodes[0].equals(source) && e.nodes[1].equals(destination)) {
           optimalPath.add(e);
         }
       }
 
-
-
-      // Output optimal path
+      // Output graph and optimal path
+      System.out.println(this.toString());
       System.out.println("\nOptimal Path:");
       for (Edge e : optimalPath) {
         System.out.println(e.nodes[0] + " -> " + e.nodes[1] + " (" + e.weight + ")");
