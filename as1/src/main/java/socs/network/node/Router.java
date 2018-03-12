@@ -20,7 +20,7 @@ public class Router {
   // Assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
   // weights associated with ports
-  short[] w = new short[4];
+  short[] weights = new short[4];
 
   // Init Link State Database
   LinkStateDatabase lsd = new LinkStateDatabase(rd);
@@ -79,6 +79,7 @@ public class Router {
 
                 sequenceConcluded = true;
                 SOSPFPacket inPacket = null;
+                LSA lsa = null;
 
                 // Blocking wait for client connection //
                 System.out.print("Waiting for another packet...\n>>");
@@ -177,7 +178,7 @@ public class Router {
                     outPacket.srcIP = rd.simulatedIPAddress;
                     outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
                     outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
-                    outPacket.weight = (int) w[routerIndex];
+                    outPacket.weight = (int) weights[routerIndex];
                     outPacket.printPacket("Outgoing");
                     oos.writeObject(outPacket);
 
@@ -185,16 +186,17 @@ public class Router {
                     sequenceConcluded = false;
 
                     // Update Link State Database
-                    LSA lsa = lsd._store.get(rd.simulatedIPAddress);
-                    lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
+                    lsa = lsd._store.get(rd.simulatedIPAddress);
+                    lsa.linkStateID = rd.simulatedIPAddress;
+                    //lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
                     // leads to number errors in seq
                     lsa.lsaSeqNumber += 1;
                     LinkDescription ld = new LinkDescription();
                     ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                     ld.portNum = inPacket.srcProcessPort;
-                    ld.tosMetrics = (int) w[routerIndex];
+                    ld.tosMetrics = (int) weights[routerIndex];
                     lsa.links.add(ld);
-                    System.out.println("LSA from start:" + "\n" + lsa.toString());
+                    //System.out.println("LSA from start:" + "\n" + lsa.toString());
                     lsd.store(lsa);
                   }
                   catch (Exception e) {
@@ -208,15 +210,15 @@ public class Router {
                   ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
 
                   // Update Link State Database
-                  LSA lsa = lsd._store.get(rd.simulatedIPAddress);
-                  lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
-                  lsa.lsaSeqNumber = Integer.MIN_VALUE;
+                  lsa = lsd._store.get(rd.simulatedIPAddress);
+                  lsa.linkStateID = rd.simulatedIPAddress;
+                  lsa.lsaSeqNumber += 1;
                   LinkDescription ld = new LinkDescription();
                   ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
                   ld.portNum = inPacket.srcProcessPort;
                   ld.tosMetrics = inPacket.weight;
                   lsa.links.add(ld);
-                  System.out.println("LSA from start:" + "\n" + lsa.toString());
+                  //System.out.println("LSA from start:" + "\n" + lsa.toString());
                   lsd.store(lsa);
                 }
 
@@ -228,17 +230,16 @@ public class Router {
                     // gets the linkstate id of the previous router to access that routers LSA
                     // to store the lsa from the previous router inside this router's LSD
                     // gonna check to see if the lsa with linkstate id of the router sending the packet is the most up to date
-                    LSA lsa;
-                    LSA nowLsa = inPacket.lsd._store.get(inPacket.srcIP);
+                    LSA currentLSA = inPacket.lsd._store.get(inPacket.srcIP);
                     // gets the lsa of the router sending the packet inside the current router if it exists
-                    LSA prevLsa = lsd._store.get(inPacket.srcIP);
-                    if(prevLsa !=  null){
-                      System.out.println("LSA in current router with IP (" + inPacket.srcIP + ")'s seq num : " + prevLsa.lsaSeqNumber);
-                      System.out.println("LSA in packet with IP (" + inPacket.srcIP + ")'s seq num : " + nowLsa.lsaSeqNumber);
-                      lsa = lsd.updateLSA(prevLsa,nowLsa);
+                    LSA prevLSA = lsd._store.get(inPacket.srcIP);
+                    if(prevLSA !=  null){
+                      System.out.println("LSA in current router with IP (" + inPacket.srcIP + ")'s seq num : " + prevLSA.lsaSeqNumber);
+                      System.out.println("LSA in packet with IP (" + inPacket.srcIP + ")'s seq num : " + currentLSA.lsaSeqNumber);
+                      lsa = lsd.updateLSA(prevLSA,currentLSA);
                     }
-                    else{
-                      lsa = nowLsa;
+                    else {
+                      lsa = currentLSA;
                     }
                     // stores the most current version
 
@@ -247,6 +248,13 @@ public class Router {
                     // print state to see what sequence number the lsa is at
                     System.out.println("new LSA in current router with IP (" + inPacket.srcIP + ")'s seq num :" + lsa.lsaSeqNumber);
 
+                    // Will we respond to this packet by sharing aswell?
+                    if (prevLSA == null) {
+                      lsdShare();
+                    }
+                    if (prevLSA.lsaSeqNumber == currentLSA.lsaSeqNumber) {
+                      lsdShare();
+                    }
                   }
                   catch (Exception e) {
                     System.out.println(e);
@@ -281,7 +289,33 @@ public class Router {
    */
   private void processDetect(String destinationIP) {
 
+    WeightedGraph detectGraph = new WeightedGraph();
+    int numberOfVertices = 0;
+    for (LSA lsa: lsd._store.values()) {
+        numberOfVertices++;
+        for (LinkDescription ld : lsa.links) {
+
+          // Populate graph with edges
+          Edge edge = new Edge(lsa.linkStateID, ld.linkID, ld.tosMetrics);
+          detectGraph.addEdge(edge);
+        }
+    }
+
+    detectGraph.djikstras(rd.simulatedIPAddress, destinationIP);
+
+
+
+
+    // Do djikstras
+    // int[] distances =
+
+
   }
+
+
+
+
+
 
   /**
    * disconnect with the router identified by the given destination ip address
@@ -326,7 +360,7 @@ public class Router {
       // Add Link to ports[]
       System.out.println("Establishing new link at ports[" + openIndex + "]");
       Link newLink = new Link(rd, otherRouter);
-      w[openIndex] = weight;
+      weights[openIndex] = weight;
       ports[openIndex] = newLink;
     }
   }
