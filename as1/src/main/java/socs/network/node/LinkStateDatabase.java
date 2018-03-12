@@ -36,7 +36,7 @@ public class LinkStateDatabase implements Serializable{
   private LSA initLinkStateDatabase() {
     LSA lsa = new LSA();
     lsa.linkStateID = rd.simulatedIPAddress;
-    lsa.lsaSeqNumber = Integer.MIN_VALUE;
+    lsa.lsaSeqNumber = 0;
     LinkDescription ld = new LinkDescription();
     ld.linkID = rd.simulatedIPAddress;
     ld.portNum = -1;
@@ -48,13 +48,14 @@ public class LinkStateDatabase implements Serializable{
 
   public String toString() {
     StringBuilder sb = new StringBuilder();
+    sb.append("\n\n_______________  Links  ________________\n");
     for (LSA lsa: _store.values()) {
-      sb.append(lsa.linkStateID).append("(" + lsa.lsaSeqNumber + ")").append(":\t");
+      sb.append("=======================\n").append("LSA: ").append(lsa.linkStateID).append("(" + lsa.lsaSeqNumber + ")").append(":\n").append("______________\nIP,Port,Weight\n");
       for (LinkDescription ld : lsa.links) {
         sb.append(ld.linkID).append(",").append(ld.portNum).append(",").
-                append(ld.tosMetrics).append("\t");
+                append(ld.tosMetrics).append("\n");
       }
-      sb.append("\n");
+      //sb.append("\n");
     }
     return sb.toString();
   }
