@@ -125,6 +125,10 @@ public class LinkStateDatabase implements Serializable{
         System.out.print( "Routers are not connected");
         break;
       }
+      else if(destination == -1){
+        System.out.print( " \n Invalid destination");
+        break;
+      }
     }
     System.out.print("\n");
   }
