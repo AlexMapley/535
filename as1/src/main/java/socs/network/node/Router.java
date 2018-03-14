@@ -294,6 +294,7 @@ public class Router {
    * @param destinationIP the ip adderss of the destination simulated router
    */
   private void processDetect(String destinationIP) {
+    lsd.updateGraph();
     lsd.getShortestPath(destinationIP);
 
   }
