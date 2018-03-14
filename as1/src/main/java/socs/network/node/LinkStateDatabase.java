@@ -31,7 +31,7 @@ public class LinkStateDatabase implements Serializable{
   /**
    * output the shortest path from this router to the destination with the given IP address
    */
-  String getShortestPath(String destinationIP) {
+  public void getShortestPath(String destinationIP) {
 
     int destination_node = indexFinder(destinationIP);
     // set this to vertex of rd.simulatedIPAddress later
@@ -101,7 +101,7 @@ public class LinkStateDatabase implements Serializable{
 
 
 
-    return destinationIP;
+    //return destinationIP;
   }
 
   // A utility function to print the constructed distances array and shortest paths
@@ -221,16 +221,16 @@ public class LinkStateDatabase implements Serializable{
         else{
           y = (short)(router2 - 10000);
         }
-        System.out.println("x index: " + x + "      y index: " + y );
+        //System.out.println("x index: " + x + "      y index: " + y );
         wg.edges[x][y] = (short) ld.tosMetrics;
       }
     }
-     for(int one = 0; one < 6; one++){
-      for(int two = 0; two < 6; two++){
-        System.out.print(wg.edges[one][two] + "\t");
-      }
-      System.out.print("\n");
-     }
+//     for(int one = 0; one < 6; one++){
+//      for(int two = 0; two < 6; two++){
+//        System.out.print(wg.edges[one][two] + "\t");
+//      }
+//      System.out.print("\n");
+//     }
   }
 
 
