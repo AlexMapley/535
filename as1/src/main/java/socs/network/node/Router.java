@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.concurrent.*;
 import java.util.*;
+import java.util.Map;
 import java.util.Vector;
 import java.io.*;
 import java.net.ServerSocket;
@@ -244,17 +245,22 @@ public class Router {
                     // stores the most current version
 
                     //lsa.lsaSeqNumber += 1;
-                    lsd.store(lsa);
+                    if(lsa == currentLSA){
+                      for(Map.Entry<String, LSA> entry :inPacket.lsd._store.entrySet()){
+                        lsd.store(entry.getValue());
+                      }
+
+                    }
                     // print state to see what sequence number the lsa is at
                     System.out.println("new LSA in current router with IP (" + inPacket.srcIP + ")'s seq num :" + lsa.lsaSeqNumber);
 
                     // Will we respond to this packet by sharing aswell?
-                    if (prevLSA == null) {
-                      lsdShare();
-                    }
-                    if (prevLSA.lsaSeqNumber == currentLSA.lsaSeqNumber) {
-                      lsdShare();
-                    }
+//                    if (prevLSA == null) {
+//                      lsdShare();
+//                    }
+//                    if (prevLSA!= null && prevLSA.lsaSeqNumber == currentLSA.lsaSeqNumber) {
+//                      lsdShare();
+//                    }
                   }
                   catch (Exception e) {
                     System.out.println(e);
@@ -288,27 +294,7 @@ public class Router {
    * @param destinationIP the ip adderss of the destination simulated router
    */
   private void processDetect(String destinationIP) {
-
-    WeightedGraph detectGraph = new WeightedGraph();
-    int numberOfVertices = 0;
-    for (LSA lsa: lsd._store.values()) {
-        numberOfVertices++;
-        for (LinkDescription ld : lsa.links) {
-
-          // Populate graph with edges
-          Edge edge = new Edge(lsa.linkStateID, ld.linkID, ld.tosMetrics);
-          detectGraph.addEdge(edge);
-        }
-    }
-
-    detectGraph.djikstras(rd.simulatedIPAddress, destinationIP);
-
-
-
-
-    // Do djikstras
-    // int[] distances =
-
+    lsd.getShortestPath(destinationIP);
 
   }
 
@@ -540,7 +526,9 @@ public class Router {
           clear();
         }else if (command.equals("lsd")) {
           System.out.println(lsd.toString());
-        }else if (command.equals("share")) {
+        }else if (command.equals("up")) {
+          lsd.updateGraph();
+        } else if (command.equals("share")) {
           lsdShare();
         }else if (command.equals("quit")) {
           System.out.println("Quitting...");
