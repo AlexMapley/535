@@ -20,6 +20,7 @@ public class Router {
 
   // Assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
+
   // weights associated with ports
   short[] weights = new short[4];
 
@@ -312,6 +313,34 @@ public class Router {
    */
   private void processDisconnect(short portNumber) {
 
+    // Remove link instance
+    int linkIndex = -1;
+    String routerIP = null;
+    for (int i = 0; i < 4; i++) {
+      if (ports[i] != null) {
+        if (ports[i].router2.processPortNumber == portNumber) {
+          linkIndex = i;
+          routerIP = ports[i].router2.simulatedIPAddress;
+        }
+      }
+    }
+    ports[linkIndex] = null;
+    weights[linkIndex] = 0;
+
+    // Update local lsd, removing reference to this connected router
+    LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
+    editedLsa.lsaSeqNumber += 1;
+    for(Iterator<LinkDescription> iter = editedLsa.links.iterator(); iter.hasNext();) {
+      LinkDescription link = iter.next();
+      if (link.portNum == portNumber) {
+          iter.remove();
+        }
+    }
+    lsd.store(editedLsa);
+
+    // Remove LSA from disconnected router
+    lsd._store.remove(routerIP);
+
   }
 
   /**
@@ -421,6 +450,7 @@ public class Router {
           public void run() {
             ObjectOutputStream oos = null;
             ObjectInputStream ois = null;
+
             // gotta update lsa sequence number when sharing
             LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
             editedLsa.lsaSeqNumber += 1;
@@ -531,7 +561,8 @@ public class Router {
           lsd.updateGraph();
         } else if (command.equals("share")) {
           lsdShare();
-        }else if (command.equals("quit")) {
+        }
+        else if (command.equals("quit")) {
           System.out.println("Quitting...");
           break;
         }
