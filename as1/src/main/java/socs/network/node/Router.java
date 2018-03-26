@@ -268,6 +268,13 @@ public class Router {
                   }
                 }
 
+                // Incoming 4 packet
+                if (inPacket.sospfType == 4) {
+
+                  // Local disconnect
+                  processDisconnect(inPacket.srcProcessPort,false);
+                }
+
                 // Close Streams
                 oos.close();
                 ois.close();
@@ -311,9 +318,9 @@ public class Router {
    *
    * @param portNumber the port number which the link attaches at
    */
-  private void processDisconnect(short portNumber) {
+  private void processDisconnect(final short portNumber, boolean caller) {
 
-    // Remove link instance
+    // Get link instance
     int linkIndex = -1;
     String routerIP = null;
     for (int i = 0; i < 4; i++) {
@@ -324,6 +331,38 @@ public class Router {
         }
       }
     }
+
+    if (linkIndex == -1) {
+      return;
+    }
+
+    // Tell other router to also disconnect
+    if (caller == true) {
+      try {
+        comSockets[linkIndex] = new Socket(ports[linkIndex].router2.processIPAddress, ports[linkIndex].router2.processPortNumber);
+        ObjectOutputStream oos = new ObjectOutputStream(comSockets[linkIndex].getOutputStream());
+        SOSPFPacket outPacket = new SOSPFPacket();
+        outPacket.srcProcessIP = "127.0.0.1";
+        outPacket.srcProcessPort = rd.processPortNumber;
+        outPacket.dstProcessPort = ports[linkIndex].router2.processPortNumber;
+        outPacket.srcIP = rd.simulatedIPAddress;
+        outPacket.dstIP = ports[linkIndex].router2.processIPAddress;
+        outPacket.sospfType = 4;
+        outPacket.printPacket("Outgoing");
+        oos.writeObject(outPacket);
+
+        // Close oos
+        oos.close();
+        comSockets[linkIndex].close();
+      }
+      catch (Exception e) {
+          System.out.println("Unable to write to socket");
+          System.out.println(e);
+        }
+    }
+
+
+    // Remove link instance
     ports[linkIndex] = null;
     weights[linkIndex] = 0;
 
@@ -399,7 +438,6 @@ public class Router {
           //  System.out.println("Testing: " + lsd.toString());
 
             ObjectOutputStream oos = null;
-            ObjectInputStream ois = null;
 
             for (int i = 0; i < 4; i++) {
               if ((ports[i] != null) && (ports[i].router2.status == RouterStatus.INIT)) {
@@ -449,7 +487,6 @@ public class Router {
           @Override
           public void run() {
             ObjectOutputStream oos = null;
-            ObjectInputStream ois = null;
 
             // gotta update lsa sequence number when sharing
             LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
@@ -470,6 +507,7 @@ public class Router {
                   outPacket.lsd = lsd;
                   outPacket.printPacket("Outgoing");
                   oos.writeObject(outPacket);
+
                   // Close oos
                   oos.close();
                   comSockets[i].close();
@@ -494,6 +532,9 @@ public class Router {
    */
   private void processConnect(String processIP, short processPort,
                               String simulatedIP, short weight) {
+                                processAttach(processIP, processPort, simulatedIP, weight);
+                                processStart();
+                                lsdShare();
 
   }
 
@@ -535,7 +576,7 @@ public class Router {
           System.out.println(lsd.toString());
         } else if (command.startsWith("disconnect ")) {
           String[] cmdLine = command.split(" ");
-          processDisconnect(Short.parseShort(cmdLine[1]));
+          processDisconnect(Short.parseShort(cmdLine[1]), true);
         } else if (command.startsWith("quit")) {
           processQuit();
         } else if (command.startsWith("attach ")) {
