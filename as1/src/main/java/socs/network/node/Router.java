@@ -336,8 +336,6 @@ public class Router {
       return;
     }
 
-    System.out.println("Made it this far");
-
     // Tell other router to also disconnect
     if (caller == true) {
       try {
