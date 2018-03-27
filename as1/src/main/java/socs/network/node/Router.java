@@ -27,8 +27,12 @@ public class Router {
   // Init Link State Database
   LinkStateDatabase lsd = new LinkStateDatabase(rd);
 
+  // Init work sockets
   Socket[] comSockets = new Socket[4];
   Socket[] clientSockets = new Socket[4];
+
+  // Flag for sharing Timeout
+  static boolean shareRecurse = true;
 
   public Router(Configuration config) {
     rd.simulatedIPAddress = config.getString("socs.network.router.ip");
@@ -256,12 +260,9 @@ public class Router {
                     System.out.println("new LSA in current router with IP (" + inPacket.srcIP + ")'s seq num :" + lsa.lsaSeqNumber);
 
                     // Will we respond to this packet by sharing aswell?
-//                    if (prevLSA == null) {
-//                      lsdShare();
-//                    }
-//                    if (prevLSA!= null && prevLSA.lsaSeqNumber == currentLSA.lsaSeqNumber) {
-//                      lsdShare();
-//                    }
+                    if (shareRecurse) {
+                      lsdShare();
+                    }
                   }
                   catch (Exception e) {
                     System.out.println(e);
@@ -488,6 +489,10 @@ public class Router {
           public void run() {
             ObjectOutputStream oos = null;
 
+            // Once we have shared from this router,
+            // We wont share again for another second
+            shareRecurse = false;
+
             // gotta update lsa sequence number when sharing
             LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
             editedLsa.lsaSeqNumber += 1;
@@ -518,6 +523,14 @@ public class Router {
                 }
               }
             }
+            try {
+              Thread.sleep(1000);
+            }
+            catch (Exception e) {
+                System.out.println("Thread unable to sleep, share might recurse nonstop");
+                System.out.println(e);
+            }
+            shareRecurse = true;
         }
       };
     new Thread(lsdShare).start();
