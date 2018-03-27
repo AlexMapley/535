@@ -260,7 +260,6 @@ public class Router {
                     System.out.println("new LSA in current router with IP (" + inPacket.srcIP + ")'s seq num :" + lsa.lsaSeqNumber);
 
                     // Will we respond to this packet by sharing aswell?
-                    System.out.println("Value of shareRecurse:" + shareRecurse);
                     if (shareRecurse) {
                       lsdShare();
                     }
