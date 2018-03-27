@@ -494,9 +494,9 @@ public class Router {
             shareRecurse = false;
 
             // gotta update lsa sequence number when sharing
-            // LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
-            // editedLsa.lsaSeqNumber += 1;
-            // lsd.store(editedLsa);
+            LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
+            editedLsa.lsaSeqNumber += 1;
+            lsd.store(editedLsa);
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
