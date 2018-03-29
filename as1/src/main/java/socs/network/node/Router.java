@@ -567,7 +567,9 @@ public class Router {
    */
   private void processQuit() {
     for (int i = 0; i < 4; i++) {
-      processDisconnect(ports[i].router2.processPortNumber, true);
+      if (ports[i] != null) {
+        processDisconnect(ports[i].router2.processPortNumber, true);
+      }
     }
   }
 
