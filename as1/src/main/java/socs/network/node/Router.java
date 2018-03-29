@@ -566,7 +566,9 @@ public class Router {
    * disconnect with all neighbors and quit the program
    */
   private void processQuit() {
-
+    for (int i = 0; i < 4; i++) {
+      processDisconnect(ports[i].router2.processPortNumber, true);
+    }
   }
 
   private void clear() {
