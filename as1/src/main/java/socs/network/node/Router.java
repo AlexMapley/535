@@ -83,137 +83,133 @@ public class Router {
             boolean sequenceConcluded = false;
             while(!sequenceConcluded) {
 
-                sequenceConcluded = true;
-                SOSPFPacket inPacket = null;
-                LSA lsa = null;
+              sequenceConcluded = true;
+              SOSPFPacket inPacket = null;
+              LSA lsa = null;
 
-                // Blocking wait for client connection //
-                System.out.print("Waiting for another packet...\n>>");
+              // Blocking wait for client connection //
+              System.out.print("Waiting for another packet...\n>>");
 
 
-                ois = new ObjectInputStream(clientSocket.getInputStream());
-                int attempts = 0;
-                while(attempts < 10) {
-                  try {
-                    Thread.sleep(100);
-                    inPacket = (SOSPFPacket) ois.readObject();
-                  }
-                  catch (ClassNotFoundException e) {
-                    System.err.println(e);
-                  }
-                  catch (IOException e) {
-                  }
-                  catch (InterruptedException e) {
-                  }
-                  if (!(inPacket == null)) {
-                    break;
-                  }
-                  attempts++;
+              ois = new ObjectInputStream(clientSocket.getInputStream());
+              int attempts = 0;
+              while (attempts < 10) {
+                try {
+                  Thread.sleep(100);
+                  inPacket = (SOSPFPacket) ois.readObject();
+                } catch (ClassNotFoundException e) {
+                  System.err.println(e);
+                } catch (IOException e) {
+                } catch (InterruptedException e) {
                 }
-
-                // Packet Timeout
-                if(attempts == 10) {
+                if (!(inPacket == null)) {
                   break;
                 }
+                attempts++;
+              }
+
+              // Packet Timeout
+              if (attempts == 10) {
+                break;
+              }
 
 
-                System.out.println("packet received");
+              System.out.println("packet received");
 
-                boolean seenRouter = false;
-                for (int i = 0; i < 4; i++) {
-                  if (ports[i] != null && inPacket != null) {
-                    if (ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
-                      seenRouter = true;
-                    }
+              boolean seenRouter = false;
+              for (int i = 0; i < 4; i++) {
+                if (ports[i] != null && inPacket != null) {
+                  if (ports[i].router2.simulatedIPAddress == inPacket.srcIP) {
+                    seenRouter = true;
                   }
                 }
-                inPacket.printPacket("Incoming");
+              }
+              inPacket.printPacket("Incoming");
 
-                // If this is a new router, we need to attach it
-                if (seenRouter == false) {
-                  processAttach(
-                  (String) inPacket.srcProcessIP, (short) inPacket.srcProcessPort,
-                  (String) inPacket.srcIP, (short) 1
-                  );
+              // If this is a new router, we need to attach it
+              if (seenRouter == false) {
+                processAttach(
+                        (String) inPacket.srcProcessIP, (short) inPacket.srcProcessPort,
+                        (String) inPacket.srcIP, (short) 1
+                );
+              }
+
+              // Get index of router in ports[]
+              int routerIndex = -1;
+              for (int i = 0; i < 4; i++) {
+                if (ports[i] != null && ports[i].router2.simulatedIPAddress.equals(inPacket.srcIP)) {
+                  routerIndex = i;
                 }
+              }
 
-                // Get index of router in ports[]
-                int routerIndex = -1;
-                for (int i = 0; i < 4; i++) {
-                  if (ports[i] != null && ports[i].router2.simulatedIPAddress.equals(inPacket.srcIP)){
-                    routerIndex = i;
-                  }
+              // Reset client sockets and streams for this channel
+              comSockets[routerIndex] = new Socket(ports[routerIndex].router2.processIPAddress, ports[routerIndex].router2.processPortNumber);
+              oos = new ObjectOutputStream(comSockets[routerIndex].getOutputStream());
+
+              // Incoming 0 packet -> Outgoing 1 packet
+              if (inPacket.sospfType == 0) {
+                ports[routerIndex].router2.status = RouterStatus.INIT;
+                try {
+                  // Need to send response
+                  SOSPFPacket outPacket = new SOSPFPacket();
+                  outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
+                  outPacket.srcProcessPort = rd.processPortNumber;
+                  outPacket.dstProcessPort = inPacket.srcProcessPort;
+                  outPacket.srcIP = rd.simulatedIPAddress;
+                  outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                  outPacket.sospfType = 1; // We are sending the second handshake, ie. 1
+                  outPacket.printPacket("Outgoing");
+                  oos.writeObject(outPacket);
+
+                  // Socket connection thread must stay alive
+                  sequenceConcluded = false;
+                } catch (Exception e) {
+                  System.out.println(e);
                 }
+              }
 
-                // Reset client sockets and streams for this channel
-                comSockets[routerIndex] = new Socket(ports[routerIndex].router2.processIPAddress, ports[routerIndex].router2.processPortNumber);
-                oos = new ObjectOutputStream(comSockets[routerIndex].getOutputStream());
+              // Incoming 1 packet -> Outgoing 2 packet
+              if (inPacket.sospfType == 1) {
+                ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
+                try {
+                  // Need to send response
+                  SOSPFPacket outPacket = new SOSPFPacket();
+                  outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
+                  outPacket.srcProcessPort = rd.processPortNumber;
+                  outPacket.dstProcessPort = inPacket.srcProcessPort;
+                  outPacket.srcIP = rd.simulatedIPAddress;
+                  outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                  outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
+                  outPacket.weight = (int) weights[routerIndex];
+                  outPacket.printPacket("Outgoing");
+                  oos.writeObject(outPacket);
 
-                // Incoming 0 packet -> Outgoing 1 packet
-                if (inPacket.sospfType == 0) {
-                  ports[routerIndex].router2.status = RouterStatus.INIT;
-                  try {
-                    // Need to send response
-                    SOSPFPacket outPacket = new SOSPFPacket();
-                    outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
-                    outPacket.srcProcessPort = rd.processPortNumber;
-                    outPacket.dstProcessPort = inPacket.srcProcessPort;
-                    outPacket.srcIP = rd.simulatedIPAddress;
-                    outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                    outPacket.sospfType = 1; // We are sending the second handshake, ie. 1
-                    outPacket.printPacket("Outgoing");
-                    oos.writeObject(outPacket);
+                  // Socket connection thread must stay alive
+                  sequenceConcluded = false;
 
-                    // Socket connection thread must stay alive
-                    sequenceConcluded = false;
-                  }
-                  catch (Exception e) {
-                    System.out.println(e);
-                  }
+//                    // Update Link State Database
+//                    lsa = lsd._store.get(rd.simulatedIPAddress);
+//                    lsa.linkStateID = rd.simulatedIPAddress;
+//                    //lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
+//                    // leads to number errors in seq
+//                    lsa.lsaSeqNumber += 1;
+//                    LinkDescription ld = new LinkDescription();
+//                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+//                    ld.portNum = inPacket.srcProcessPort;
+//                    ld.tosMetrics = (int) weights[routerIndex];
+//                    lsa.links.add(ld);
+//                    //System.out.println("LSA from start:" + "\n" + lsa.toString());
+//                    lsd.store(lsa);
+                } catch (Exception e) {
+                  // This is super annoying, don't print
+                  //System.out.println(e);
                 }
+              }
 
-                // Incoming 1 packet -> Outgoing 2 packet
-                if (inPacket.sospfType == 1) {
-                  ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
-                  try {
-                    // Need to send response
-                    SOSPFPacket outPacket = new SOSPFPacket();
-                    outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
-                    outPacket.srcProcessPort = rd.processPortNumber;
-                    outPacket.dstProcessPort = inPacket.srcProcessPort;
-                    outPacket.srcIP = rd.simulatedIPAddress;
-                    outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                    outPacket.sospfType = 2; // We are sending the third handshake, ie. 2
-                    outPacket.weight = (int) weights[routerIndex];
-                    outPacket.printPacket("Outgoing");
-                    oos.writeObject(outPacket);
-
-                    // Socket connection thread must stay alive
-                    sequenceConcluded = false;
-
-                    // Update Link State Database
-                    lsa = lsd._store.get(rd.simulatedIPAddress);
-                    lsa.linkStateID = rd.simulatedIPAddress;
-                    //lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
-                    // leads to number errors in seq
-                    lsa.lsaSeqNumber += 1;
-                    LinkDescription ld = new LinkDescription();
-                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
-                    ld.portNum = inPacket.srcProcessPort;
-                    ld.tosMetrics = (int) weights[routerIndex];
-                    lsa.links.add(ld);
-                    //System.out.println("LSA from start:" + "\n" + lsa.toString());
-                    lsd.store(lsa);
-                  }
-                  catch (Exception e) {
-                    // This is super annoying, don't print
-                    //System.out.println(e);
-                  }
-                }
-
-                // Incoming 2 packet
-                if (inPacket.sospfType == 2) {
-                  ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
+              // Incoming 2 packet
+              if (inPacket.sospfType == 2) {
+                ports[routerIndex].router2.status = RouterStatus.TWO_WAY;
+                try {
 
                   // Update Link State Database
                   lsa = lsd._store.get(rd.simulatedIPAddress);
@@ -226,7 +222,28 @@ public class Router {
                   lsa.links.add(ld);
                   //System.out.println("LSA from start:" + "\n" + lsa.toString());
                   lsd.store(lsa);
+
+
+                  // Need to send response
+                  SOSPFPacket outPacket = new SOSPFPacket();
+                  outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
+                  outPacket.srcProcessPort = rd.processPortNumber;
+                  outPacket.dstProcessPort = inPacket.srcProcessPort;
+                  outPacket.srcIP = rd.simulatedIPAddress;
+                  outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                  outPacket.sospfType = 5; // this is for set up after
+                  outPacket.weight = (int) weights[routerIndex];
+                  outPacket.lsd = lsd;
+                  outPacket.printPacket("Outgoing");
+                  oos.writeObject(outPacket);
+
+
+                } catch (Exception e) {
+                  // This is super annoying, don't print
+                  //System.out.println(e);
                 }
+              }
+
 
                 if (inPacket.sospfType == 3) {
                   try {
@@ -275,6 +292,31 @@ public class Router {
                   // Local disconnect
                   processDisconnect(inPacket.srcProcessPort,false);
                 }
+
+              if (inPacket.sospfType == 5) {
+                try {
+                    // creates link to other router after receiving hello after 2 way is set up
+                    lsa = lsd._store.get(rd.simulatedIPAddress);
+                    lsa.linkStateID = rd.simulatedIPAddress;
+                    lsa.lsaSeqNumber += 1;
+                    LinkDescription ld = new LinkDescription();
+                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+                    ld.portNum = inPacket.srcProcessPort;
+                    ld.tosMetrics = inPacket.weight;
+                    lsa.links.add(ld);
+                    //System.out.println("LSA from start:" + "\n" + lsa.toString());
+                    lsd.store(lsa);
+                  for(Map.Entry<String, LSA> entry :inPacket.lsd._store.entrySet()){
+                    lsd.store(entry.getValue());
+                  }
+                  
+                } catch (Exception e) {
+                  // This is super annoying, don't print
+                  //System.out.println(e);
+                }
+              }
+
+
 
                 // Close Streams
                 oos.close();
