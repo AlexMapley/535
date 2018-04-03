@@ -26,13 +26,13 @@ public class Router {
 
   // Init Link State Database
   LinkStateDatabase lsd = new LinkStateDatabase(rd);
+  LinkStateDatabase shareThreadLsd = new LinkStateDatabase(rd);
+  int shareCounter = 2;
 
   // Init work sockets
   Socket[] comSockets = new Socket[4];
   Socket[] clientSockets = new Socket[4];
 
-  // Flag for sharing Timeout
-  static boolean shareRecurse = true;
 
   public Router(Configuration config) {
     rd.simulatedIPAddress = config.getString("socs.network.router.ip");
@@ -187,19 +187,20 @@ public class Router {
                   // Socket connection thread must stay alive
                   sequenceConcluded = false;
 
-//                    // Update Link State Database
-//                    lsa = lsd._store.get(rd.simulatedIPAddress);
-//                    lsa.linkStateID = rd.simulatedIPAddress;
-//                    //lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
-//                    // leads to number errors in seq
-//                    lsa.lsaSeqNumber += 1;
-//                    LinkDescription ld = new LinkDescription();
-//                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
-//                    ld.portNum = inPacket.srcProcessPort;
-//                    ld.tosMetrics = (int) weights[routerIndex];
-//                    lsa.links.add(ld);
-//                    //System.out.println("LSA from start:" + "\n" + lsa.toString());
-//                    lsd.store(lsa);
+                   // Update Link State Database
+                   lsa = lsd._store.get(rd.simulatedIPAddress);
+                   lsa.linkStateID = rd.simulatedIPAddress;
+                   //lsa.linkStateID = ports[routerIndex].router1.simulatedIPAddress;
+                   // leads to number errors in seq
+                   lsa.lsaSeqNumber += 1;
+                   LinkDescription ld = new LinkDescription();
+                   ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+                   ld.portNum = inPacket.srcProcessPort;
+                   ld.tosMetrics = (int) weights[routerIndex];
+                   lsa.links.add(ld);
+                   //System.out.println("LSA from start:" + "\n" + lsa.toString());
+                   lsd.store(lsa);
+
                 } catch (Exception e) {
                   // This is super annoying, don't print
                   //System.out.println(e);
@@ -225,17 +226,17 @@ public class Router {
 
 
                   // Need to send response
-                  SOSPFPacket outPacket = new SOSPFPacket();
-                  outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
-                  outPacket.srcProcessPort = rd.processPortNumber;
-                  outPacket.dstProcessPort = inPacket.srcProcessPort;
-                  outPacket.srcIP = rd.simulatedIPAddress;
-                  outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
-                  outPacket.sospfType = 5; // this is for set up after
-                  outPacket.weight = (int) weights[routerIndex];
-                  outPacket.lsd = lsd;
-                  outPacket.printPacket("Outgoing");
-                  oos.writeObject(outPacket);
+                  // SOSPFPacket outPacket = new SOSPFPacket();
+                  // outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
+                  // outPacket.srcProcessPort = rd.processPortNumber;
+                  // outPacket.dstProcessPort = inPacket.srcProcessPort;
+                  // outPacket.srcIP = rd.simulatedIPAddress;
+                  // outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                  // outPacket.sospfType = 5; // this is for set up after
+                  // outPacket.weight = (int) weights[routerIndex];
+                  // outPacket.lsd = lsd;
+                  // outPacket.printPacket("Outgoing");
+                  // oos.writeObject(outPacket);
 
 
                 } catch (Exception e) {
@@ -266,7 +267,6 @@ public class Router {
                     }
                     // stores the most current version
 
-                    //lsa.lsaSeqNumber += 1;
                     if(lsa == currentLSA){
                       for(Map.Entry<String, LSA> entry :inPacket.lsd._store.entrySet()){
                         lsd.store(entry.getValue());
@@ -277,9 +277,7 @@ public class Router {
                     System.out.println("new LSA in current router with IP (" + inPacket.srcIP + ")'s seq num :" + lsa.lsaSeqNumber);
 
                     // Will we respond to this packet by sharing aswell?
-                    if (shareRecurse) {
-                      lsdShare();
-                    }
+                    lsdShare(inPacket.lsd);
                   }
                   catch (Exception e) {
                     System.out.println(e);
@@ -293,28 +291,28 @@ public class Router {
                   processDisconnect(inPacket.srcProcessPort,false);
                 }
 
-              if (inPacket.sospfType == 5) {
-                try {
-                    // creates link to other router after receiving hello after 2 way is set up
-                    lsa = lsd._store.get(rd.simulatedIPAddress);
-                    lsa.linkStateID = rd.simulatedIPAddress;
-                    lsa.lsaSeqNumber += 1;
-                    LinkDescription ld = new LinkDescription();
-                    ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
-                    ld.portNum = inPacket.srcProcessPort;
-                    ld.tosMetrics = inPacket.weight;
-                    lsa.links.add(ld);
-                    //System.out.println("LSA from start:" + "\n" + lsa.toString());
-                    lsd.store(lsa);
-                  for(Map.Entry<String, LSA> entry :inPacket.lsd._store.entrySet()){
-                    lsd.store(entry.getValue());
-                  }
-                  
-                } catch (Exception e) {
-                  // This is super annoying, don't print
-                  //System.out.println(e);
-                }
-              }
+              // if (inPacket.sospfType == 5) {
+              //   try {
+              //       // creates link to other router after receiving hello after 2 way is set up
+              //       lsa = lsd._store.get(rd.simulatedIPAddress);
+              //       lsa.linkStateID = rd.simulatedIPAddress;
+              //       lsa.lsaSeqNumber += 1;
+              //       LinkDescription ld = new LinkDescription();
+              //       ld.linkID = ports[routerIndex].router2.simulatedIPAddress;
+              //       ld.portNum = inPacket.srcProcessPort;
+              //       ld.tosMetrics = inPacket.weight;
+              //       lsa.links.add(ld);
+              //       //System.out.println("LSA from start:" + "\n" + lsa.toString());
+              //       lsd.store(lsa);
+              //     for(Map.Entry<String, LSA> entry :inPacket.lsd._store.entrySet()){
+              //       lsd.store(entry.getValue());
+              //     }
+              //
+              //   } catch (Exception e) {
+              //     // This is super annoying, don't print
+              //     //System.out.println(e);
+              //   }
+              // }
 
 
 
@@ -524,21 +522,55 @@ public class Router {
   /**
    * broadcast Tcp handshake to neighbors
    */
-  private void lsdShare() {
+  private void lsdShare(LinkStateDatabase sharedLsd) {
+
+    // Should we be recursing?
+    boolean recurse = false;
+
+    // If the initial lsd is null, we know we are the original caller
+    if (sharedLsd == null) {
+      sharedLsd = lsd;
+      recurse = true;
+    }
+    else {
+
+      // Check if the sharedLsd is new to us
+      for (Map.Entry<String, LSA> entry : sharedLsd._store.entrySet()) {
+        if (!(lsd.hasMoreRecentLSA(entry.getValue()))) {
+          recurse = true;
+        }
+      }
+
+      // Check if we can pdate the sharedLsd
+      for (Map.Entry<String, LSA> entry : lsd._store.entrySet()) {
+          if (!(sharedLsd.hasMoreRecentLSA(entry.getValue()))) {
+            sharedLsd.store(entry.getValue());
+            recurse = true;
+          }
+      }
+      lsd = sharedLsd;
+    }
+    shareThreadLsd = sharedLsd;
+
+    if (recurse == false && shareCounter > 0) {
+      recurse = true;
+      shareCounter--;
+    }
+    if (recurse == false && shareCounter == 0) {
+      shareCounter = 2;
+    }
+
+
     // Attempt to contact other routers
     Runnable lsdShare = new Runnable() {
           @Override
           public void run() {
             ObjectOutputStream oos = null;
 
-            // Once we have shared from this router,
-            // We wont share again for another second
-            shareRecurse = false;
-
             // gotta update lsa sequence number when sharing
-            LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
-            editedLsa.lsaSeqNumber += 1;
-            lsd.store(editedLsa);
+            // LSA editedLsa = lsd._store.get(rd.simulatedIPAddress);
+            // editedLsa.lsaSeqNumber += 1;
+            // lsd.store(editedLsa);
             for (int i = 0; i < 4; i++) {
               if (ports[i] != null) {
                 try {
@@ -551,7 +583,7 @@ public class Router {
                   outPacket.srcIP = rd.simulatedIPAddress;
                   outPacket.dstIP = ports[i].router2.processIPAddress;
                   outPacket.sospfType = 3; // We are sending the first handshake, ie. HELLO
-                  outPacket.lsd = lsd;
+                  outPacket.lsd = shareThreadLsd;
                   outPacket.printPacket("Outgoing");
                   oos.writeObject(outPacket);
 
@@ -565,17 +597,12 @@ public class Router {
                 }
               }
             }
-            try {
-              Thread.sleep(1000);
-            }
-            catch (Exception e) {
-                System.out.println("Thread unable to sleep, share might recurse nonstop");
-                System.out.println(e);
-            }
-            shareRecurse = true;
         }
       };
-    new Thread(lsdShare).start();
+
+    if (recurse) {
+      new Thread(lsdShare).start();
+    }
   }
 
   /**
@@ -589,7 +616,7 @@ public class Router {
                               String simulatedIP, short weight) {
                                 processAttach(processIP, processPort, simulatedIP, weight);
                                 processStart();
-                                lsdShare();
+                                lsdShare(null);
 
   }
 
@@ -660,7 +687,7 @@ public class Router {
         }else if (command.equals("up")) {
           lsd.updateGraph();
         } else if (command.equals("share")) {
-          lsdShare();
+          lsdShare(null);
         }
         else if (command.equals("quit")) {
           System.out.println("Quitting...");

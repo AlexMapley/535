@@ -28,6 +28,20 @@ public class LinkStateDatabase implements Serializable{
   public void store(LSA lsa) {
     _store.put(lsa.linkStateID, lsa);
   }
+
+
+  public boolean hasMoreRecentLSA(LSA lsa) {
+    LSA previousLSA = _store.get(lsa.linkStateID);
+
+    if (previousLSA == null) {
+      return false;
+    }
+    if (previousLSA.lsaSeqNumber < lsa.lsaSeqNumber) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * output the shortest path from this router to the destination with the given IP address
    */

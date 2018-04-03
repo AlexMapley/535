@@ -32,6 +32,7 @@ public class SOSPFPacket implements Serializable {
   public LinkStateDatabase lsd;
   public int weight;
 
+
     //used by LSAUPDATE
     // why are we using vector
   public Vector<LSA> lsaArray = null;
