@@ -20,6 +20,7 @@ public class Router {
 
   // Assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
+  boolean[] feedbacks = new boolean[4];
 
   // weights associated with ports
   short[] weights = new short[4];
@@ -291,10 +292,35 @@ public class Router {
                   processDisconnect(inPacket.srcProcessPort,false);
                 }
 
-              if (inPacket.sospfType == 6){
+                if (inPacket.sospfType == 6){
                 // for first part of heartbeat
                 // original router sent this to
-              }
+                  try {
+                  // Need to send response
+                    SOSPFPacket outPacket = new SOSPFPacket();
+                    outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
+                    outPacket.srcProcessPort = rd.processPortNumber;
+                    outPacket.dstProcessPort = inPacket.srcProcessPort;
+                    outPacket.srcIP = rd.simulatedIPAddress;
+                    outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                    outPacket.sospfType = 7; // We are sending the third handshake, ie. 2
+                    outPacket.weight = (int) weights[routerIndex];
+                    outPacket.printPacket("Outgoing");
+                    oos.writeObject(outPacket);
+
+                    // Socket connection thread must stay alive
+                    sequenceConcluded = false;
+                  }
+                  catch (Exception e) {
+                    System.out.println(e);
+                  }
+                }
+
+                if (inPacket.sospfType == 7){
+                // this is receiving the feedback from neighbours after heartbeat
+                  // this is for a method inside heartbeat
+                  feedbacks[routerIndex] = true;
+                }
 
               // if (inPacket.sospfType == 5) {
               //   try {
@@ -364,12 +390,12 @@ public class Router {
    *
    * @param portNumber the port number which the link attaches at
    */
-  private void processDisconnect(final short portNumber, boolean caller) {
+  public void processDisconnect(final short portNumber, boolean caller) {
 
     // Get link instance
     int linkIndex = -1;
     String routerIP = null;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++){
       if (ports[i] != null) {
         if (ports[i].router2.processPortNumber == portNumber) {
           linkIndex = i;
@@ -520,6 +546,7 @@ public class Router {
         }
       };
     new Thread(routerPinger).start();
+    new Heartbeat(this).run();
   }
 
 
@@ -564,6 +591,7 @@ public class Router {
     if (recurse == false && shareCounter == 0) {
       shareCounter = 2;
     }
+
 
 
     // Attempt to contact other routers
