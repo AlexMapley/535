@@ -20,6 +20,8 @@ public class Router {
 
   // Assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
+  boolean[] heartBeats = {true,true,true,true};
+  boolean shareRecurse = true;
 
   // weights associated with ports
   short[] weights = new short[4];
@@ -27,7 +29,7 @@ public class Router {
   // Init Link State Database
   LinkStateDatabase lsd = new LinkStateDatabase(rd);
   LinkStateDatabase shareThreadLsd = new LinkStateDatabase(rd);
-  int shareCounter = 2;
+  int shareCounter = 4;
 
   // Init work sockets
   Socket[] comSockets = new Socket[4];
@@ -51,7 +53,6 @@ public class Router {
 
                   while (true) {
                     clientSockets[clientSocketsIndex] = serverSocket.accept();
-                    System.out.println("Accepted new connection!");
                     Thread clientThread = new Thread(new connectionThread(clientSockets[clientSocketsIndex]));
                     clientThread.start();
 
@@ -66,6 +67,10 @@ public class Router {
           }
       };
     new Thread(listener).start();
+
+    // heart beat on repeat
+    heartBeat();
+
   }
 
   // Start Individual Client Thread
@@ -86,9 +91,6 @@ public class Router {
               sequenceConcluded = true;
               SOSPFPacket inPacket = null;
               LSA lsa = null;
-
-              // Blocking wait for client connection //
-              System.out.print("Waiting for another packet...\n>>");
 
 
               ois = new ObjectInputStream(clientSocket.getInputStream());
@@ -114,8 +116,6 @@ public class Router {
               }
 
 
-              System.out.println("packet received");
-
               boolean seenRouter = false;
               for (int i = 0; i < 4; i++) {
                 if (ports[i] != null && inPacket != null) {
@@ -124,7 +124,10 @@ public class Router {
                   }
                 }
               }
-              inPacket.printPacket("Incoming");
+
+              if (inPacket.sospfType < 6)
+                inPacket.printPacket("Incoming");
+
 
               // If this is a new router, we need to attach it
               if (seenRouter == false) {
@@ -164,7 +167,7 @@ public class Router {
                   // Socket connection thread must stay alive
                   sequenceConcluded = false;
                 } catch (Exception e) {
-                  System.out.println(e);
+                  //System.out.println(e);
                 }
               }
 
@@ -203,7 +206,7 @@ public class Router {
 
                 } catch (Exception e) {
                   // This is super annoying, don't print
-                  //System.out.println(e);
+                  ////System.out.println(e);
                 }
               }
 
@@ -241,7 +244,7 @@ public class Router {
 
                 } catch (Exception e) {
                   // This is super annoying, don't print
-                  //System.out.println(e);
+                  ////System.out.println(e);
                 }
               }
 
@@ -280,7 +283,7 @@ public class Router {
                     lsdShare(inPacket.lsd);
                   }
                   catch (Exception e) {
-                    System.out.println(e);
+                    //System.out.println(e);
                   }
                 }
 
@@ -288,7 +291,33 @@ public class Router {
                 if (inPacket.sospfType == 4) {
 
                   // Local disconnect
-                  processDisconnect(inPacket.srcProcessPort,false);
+                  processDisconnect(inPacket.srcProcessPort, true);
+                }
+
+                // Incoming 6 packet
+                if (inPacket.sospfType == 6) {
+
+                  try {
+                    // Need to send response
+                    SOSPFPacket outPacket = new SOSPFPacket();
+                    outPacket.srcProcessIP = inPacket.srcProcessIP; // localhost
+                    outPacket.srcProcessPort = rd.processPortNumber;
+                    outPacket.dstProcessPort = inPacket.srcProcessPort;
+                    outPacket.srcIP = rd.simulatedIPAddress;
+                    outPacket.dstIP = ports[routerIndex].router2.processIPAddress;
+                    outPacket.sospfType = 7; // We are sending the heartbeat response
+                    oos.writeObject(outPacket);
+
+                    // Socket connection thread must stay alive
+                    sequenceConcluded = false;
+                  } catch (Exception e) {
+                    //System.out.println(e);
+                  }
+                }
+
+                // Incoming 7 packet
+                if (inPacket.sospfType == 7) {
+                  heartBeats[routerIndex] = true;
                 }
 
               // if (inPacket.sospfType == 5) {
@@ -310,7 +339,7 @@ public class Router {
               //
               //   } catch (Exception e) {
               //     // This is super annoying, don't print
-              //     //System.out.println(e);
+              //     ////System.out.println(e);
               //   }
               // }
 
@@ -361,6 +390,7 @@ public class Router {
    */
   private void processDisconnect(final short portNumber, boolean caller) {
 
+    System.out.println("Disconnecting with router at port: " + portNumber);
     // Get link instance
     int linkIndex = -1;
     String routerIP = null;
@@ -397,8 +427,8 @@ public class Router {
         comSockets[linkIndex].close();
       }
       catch (Exception e) {
-          System.out.println("Unable to write to socket");
-          System.out.println(e);
+          //System.out.println("Unable to write to socket");
+          //System.out.println(e);
         }
     }
 
@@ -498,7 +528,6 @@ public class Router {
                   outPacket.sospfType = 0; // We are sending the first handshake, ie. HELLO
                   // added weight needs to be fixed
                   outPacket.weight = 0;
-                  outPacket.printPacket("Outgoing");
                   oos.writeObject(outPacket);
 
                   // Close oos
@@ -507,14 +536,102 @@ public class Router {
 
                 }
                 catch (Exception e) {
-                    System.out.println("Unable to write to socket");
-                    System.out.println(e);
+                    //System.out.println("Unable to write to socket");
+                    //System.out.println(e);
                 }
               }
             }
         }
       };
     new Thread(routerPinger).start();
+  }
+
+  private void heartBeat() {
+
+    // Set heartbeat values to false
+    for (int i = 0; i < 4; i++) {
+      if (ports[i] != null)
+        heartBeats[i] = false;
+    }
+    // Attempt to contact other routers
+
+    Runnable heartbeatThread = new Runnable() {
+
+
+          @Override
+          public void run() {
+
+            while (true) {
+            System.out.println("Beep");
+            for (int i = 0; i < 4; i++) {
+              if (ports[i] != null) {
+                heartBeats[i] = false;
+              }
+              else {
+                heartBeats[i] = true;
+              }
+            }
+
+            ObjectOutputStream oos = null;
+
+            for (int i = 0; i < 4; i++) {
+              if (ports[i] != null) {
+                // to make sure that we do not resend to already created ports
+                try {
+
+                  comSockets[i] = new Socket(ports[i].router2.processIPAddress, ports[i].router2.processPortNumber);
+                  oos = new ObjectOutputStream(comSockets[i].getOutputStream());
+                  // Contact Router - Handshake part 1
+                  ports[i].router2.status = RouterStatus.INIT;
+                  SOSPFPacket outPacket = new SOSPFPacket();
+                  outPacket.srcProcessIP = "127.0.0.1";
+                  outPacket.srcProcessPort = rd.processPortNumber;
+                  outPacket.dstProcessPort = ports[i].router2.processPortNumber;
+                  outPacket.srcIP = rd.simulatedIPAddress;
+                  outPacket.dstIP = ports[i].router2.processIPAddress;
+                  outPacket.sospfType = 6; // We are sending the first handshake, ie. HELLO
+                  // added weight needs to be fixed
+                  outPacket.weight = 0;
+                  oos.writeObject(outPacket);
+
+                  // Close oos
+                  oos.close();
+                  comSockets[i].close();
+
+                }
+                catch (Exception e) {
+                }
+            }
+          }
+          try {
+            Thread.sleep(2000);
+          }
+          catch (Exception e) {
+            //System.out.println(e);
+          }
+
+          boolean updateOccured = false;
+          for (int i = 0; i < 4; i++) {
+            if (heartBeats[i] == false) {
+              processDisconnect(ports[i].router2.processPortNumber, false);
+              updateOccured = true;
+            }
+          }
+
+          if(updateOccured) {
+            lsdShare(lsd);
+          }
+
+          try {
+            Thread.sleep(18000);
+          }
+          catch (Exception e) {
+            //System.out.println(e);
+          }
+        }
+      }
+      };
+    new Thread(heartbeatThread).start();
   }
 
 
@@ -556,9 +673,6 @@ public class Router {
       recurse = true;
       shareCounter--;
     }
-    if (recurse == false && shareCounter == 0) {
-      shareCounter = 2;
-    }
 
 
     // Attempt to contact other routers
@@ -592,14 +706,19 @@ public class Router {
                   comSockets[i].close();
                 }
                 catch (Exception e) {
-                    System.out.println("Unable to write to socket");
-                    System.out.println(e);
+                    //System.out.println("Unable to write to socket");
+                    //System.out.println(e);
                 }
               }
             }
+        try {
+          Thread.sleep(3000);
+          shareCounter = 5;
         }
-      };
-
+        catch (Exception e) {
+        }
+      }
+    };
     if (recurse) {
       new Thread(lsdShare).start();
     }

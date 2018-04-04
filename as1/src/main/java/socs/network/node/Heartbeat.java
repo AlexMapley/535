@@ -21,42 +21,42 @@ public class Heartbeat extends TimerTask{
     }
 
 
-//    public static void main(String args[]) {
-//
-//        TimerTask timerTask = new Heartbeat();
-//
-//        // running timer task as daemon thread
-//
-//        Timer timer = new Timer(true);
-//
-//        timer.scheduleAtFixedRate(timerTask, 0, 10 * 1000);
-//
-//        System.out.println("TimerTask begins! :" + new Date());
-//
-//        // cancel after sometime
-//
-//        try {
-//
-//            Thread.sleep(20000);
-//
-//        } catch (InterruptedException e) {
-//
-//            e.printStackTrace();
-//        }
-//
-//        timer.cancel();
-//
-//        System.out.println("TimerTask cancelled! :" + new Date());
-//
-//        try {
-//
-//            Thread.sleep(30000);
-//
-//        } catch (InterruptedException e) {
-//
-//            e.printStackTrace();
-//
-//        }
-//    }
+   public static void main(String args[]) {
+
+       TimerTask timerTask = new Heartbeat();
+
+       // running timer task as daemon thread
+
+       Timer timer = new Timer(true);
+
+       timer.scheduleAtFixedRate(timerTask, 0, 10 * 1000);
+
+       System.out.println("TimerTask begins! :" + new Date());
+
+       // cancel after sometime
+
+       try {
+
+           Thread.sleep(20000);
+
+       } catch (InterruptedException e) {
+
+           e.printStackTrace();
+       }
+
+       timer.cancel();
+
+       System.out.println("TimerTask cancelled! :" + new Date());
+
+       try {
+
+           Thread.sleep(30000);
+
+       } catch (InterruptedException e) {
+
+           e.printStackTrace();
+
+       }
+   }
 
 }
