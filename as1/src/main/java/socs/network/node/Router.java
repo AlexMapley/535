@@ -291,6 +291,11 @@ public class Router {
                   processDisconnect(inPacket.srcProcessPort,false);
                 }
 
+              if (inPacket.sospfType == 6){
+                // for first part of heartbeat
+                // original router sent this to
+              }
+
               // if (inPacket.sospfType == 5) {
               //   try {
               //       // creates link to other router after receiving hello after 2 way is set up

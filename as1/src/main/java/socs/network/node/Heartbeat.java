@@ -5,11 +5,20 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class Heartbeat extends TimerTask{
-    public void run() {
+    private Router rtr;
+    Heartbeat(Router r){
 
-        System.out.println("Start time:" + new Date());
+    }
+    public void run() {
+        TimerTask timerTask = new Heartbeat(rtr);
+        Timer timer = new Timer(true);
+        timer.scheduleAtFixedRate(timerTask, 0, 30 * 1000);
+        // 30 seconds
+
+        System.out.println("Start");
         doSomeWork();
-        System.out.println("End time:" + new Date());
+
+        System.out.println("End");
 
     }
     private void doSomeWork() {
